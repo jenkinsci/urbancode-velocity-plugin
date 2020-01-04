@@ -16,13 +16,14 @@ public class JenkinsIntegrationId {
 
     private String getJenkinsId() {
         String jenkinsId;
-        if (IdStore.getId(Jenkins.getInstance()) != null) {
-            jenkinsId = IdStore.getId(Jenkins.getInstance());
-        } else {
-            IdStore.makeId(Jenkins.getInstance());
-            jenkinsId = IdStore.getId(Jenkins.getInstance());
-        }
-
+	Jenkins jenkins = Jenkins.getInstanceOrNull();
+	if (jenkins != null){
+		jenkinsId = IdStore.getId(jenkins);
+		if (jenkinsId == null) {        
+            		IdStore.makeId(jenkins);
+            		jenkinsId = IdStore.getId(jenkins);
+        	}	
+	}//but what if jenkins is null? Maybe get() instead of getInstanceOrNull()
         return jenkinsId;
     }
 
