@@ -12,7 +12,7 @@ public class OnConnectListener {
 		public void call(ConnectSocket socket, String event, Object... args) {
 			BuildJobsList buildJobList = new BuildJobsList();
 			BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj(null, "Building Job List", null);
-        	buildJobList.runAsJenkinsUser(paramObj);
+        		buildJobList.runAsJenkinsUser(paramObj);
 		}
 	};
 }
