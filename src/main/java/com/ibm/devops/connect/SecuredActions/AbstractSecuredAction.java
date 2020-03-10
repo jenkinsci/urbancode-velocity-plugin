@@ -46,7 +46,7 @@ public abstract class AbstractSecuredAction {
 
         Authentication originalAuth = null;
 
-        if(providedCredentials != null) {
+        if (providedCredentials != null) {
             originalAuth = Jenkins.getInstance().getAuthentication();
             try {
                 Authentication authenticatedAuth = authenticateCredentials(providedCredentials);

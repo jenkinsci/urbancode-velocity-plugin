@@ -9,9 +9,7 @@
 package com.ibm.devops.connect;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
-import java.util.Properties;
 
 import jenkins.model.Jenkins;
 
@@ -19,14 +17,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ibm.devops.connect.DevOpsGlobalConfiguration;
-
-import com.ibm.cloud.urbancode.connect.client.Listeners;
-import com.ibm.devops.connect.OnConnectListener;
-
-import com.ibm.devops.connect.CloudPublisher;
-
-import io.socket.client.Socket;
 import com.ibm.devops.connect.SecuredActions.BuildJobsList;
 import com.ibm.devops.connect.SecuredActions.BuildJobsList.BuildJobListParamObj;
 
@@ -37,7 +27,6 @@ import com.rabbitmq.client.*;
 import java.io.IOException;
 import com.ibm.devops.connect.Endpoints.EndpointManager;
 
-import java.net.MalformedURLException;
 
 public class CloudSocketComponent {
 
@@ -65,27 +54,27 @@ public class CloudSocketComponent {
     }
 
     public String getSyncId() {
-    	return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId();
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId();
     }
 
     public String getSyncToken() {
-    	return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
     }
 
     public void connectToCloudServices() throws Exception {
-    	logPrefix= logPrefix + "connectToCloudServices ";
+        logPrefix= logPrefix + "connectToCloudServices ";
 
         connectToAMQP();
 
         log.info(logPrefix + "Assembling list of Jenkins Jobs...");
 
         BuildJobsList buildJobList = new BuildJobsList();
-        BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj(null, "Building Job List", null);
+        BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj();
         buildJobList.runAsJenkinsUser(paramObj);
     }
 
     public static boolean isAMQPConnected() {
-        if(conn == null) {
+        if (conn == null) {
             return false;
         }
 
