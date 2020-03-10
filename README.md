@@ -6,6 +6,10 @@ To build the plugin, simply run
 ```
 mvn install
 ```
+or
+```
+mvn clean package -DskipTests
+```
 in the root of this repository. Optionally pass the `-DskipTests` flag to speed up the build by not running the tests.
 
 **NOTE**: Must be built with Java 8\
