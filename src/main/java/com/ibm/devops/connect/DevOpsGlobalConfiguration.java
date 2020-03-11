@@ -23,6 +23,7 @@ import hudson.util.FormValidation;
 import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -199,10 +200,10 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
     }
 
     public boolean isConfigured() {
-        return this.syncId != null &&
-               this.syncToken != null &&
-               this.baseUrl != null &&
-               this.credentialsId != null &&
-               this.apiToken != null;
+        return StringUtils.isNotEmpty(this.syncId) &&
+               StringUtils.isNotEmpty(this.syncToken) &&
+               StringUtils.isNotEmpty(this.baseUrl) &&
+               StringUtils.isNotEmpty(this.credentialsId) &&
+               StringUtils.isNotEmpty(this.apiToken);
     }
 }
