@@ -24,7 +24,6 @@ import jenkins.model.GlobalConfiguration;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
-import com.ibm.devops.connect.ConnectComputerListener;
 
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
@@ -35,8 +34,6 @@ import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.security.ACL;
 import jenkins.model.Jenkins;
 
-import com.ibm.devops.connect.CloudPublisher;
-import com.ibm.devops.connect.CloudSocketComponent;
 /**
  * Created by lix on 7/20/17.
  */
@@ -199,5 +196,13 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
         ConnectComputerListener connectComputerListener = new ConnectComputerListener();
 
         connectComputerListener.onOnline(Jenkins.getInstance().toComputer());
+    }
+
+    public boolean isConfigured() {
+        return this.syncId != null &&
+               this.syncToken != null &&
+               this.baseUrl != null &&
+               this.credentialsId != null &&
+               this.apiToken != null;
     }
 }

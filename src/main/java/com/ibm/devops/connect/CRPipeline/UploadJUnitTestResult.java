@@ -55,7 +55,10 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
-            throws AbortException, InterruptedException, IOException {
+    throws AbortException, InterruptedException, IOException {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            return;
+        }
 
         Object fatalFailure = this.properties.get("fatal");
         String buildUrl = Jenkins.getInstance().getRootUrl() + build.getUrl();
@@ -117,7 +120,7 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
         }
 
         @Override public Boolean invoke(File f, VirtualChannel channel) {
-            listener.getLogger().println("Uploading JUnint File");
+            listener.getLogger().println("Uploading JUnit File");
 
             String filePath = properties.get("filePath");
             String tenantId = properties.get("tenant_id");

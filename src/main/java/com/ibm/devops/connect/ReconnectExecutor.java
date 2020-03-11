@@ -8,14 +8,11 @@
  *******************************************************************************/
 package com.ibm.devops.connect;
 
-import hudson.slaves.ComputerListener;
-import hudson.model.Computer;
-import hudson.Extension;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
+import jenkins.model.Jenkins;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +41,7 @@ public class ReconnectExecutor {
         public void run()
         {
             try {
-                if (!cloudSocketInstance.isAMQPConnected()) {
+                if (!cloudSocketInstance.isAMQPConnected() && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
                     try {
                         log.info("Reconnecting to AMQP");
                         cloudSocketInstance.connectToAMQP();

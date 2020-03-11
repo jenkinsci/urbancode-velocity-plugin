@@ -14,11 +14,10 @@
 
 package com.ibm.devops.connect;
 
-
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -70,12 +69,14 @@ public class CloudItemListener extends ItemListener {
         List<Item> allProjects= JenkinsServer.getAllItems();
         List<JSONObject> allJobs = new ArrayList<JSONObject>();
 
-        for (Item anItem : allProjects) {
-            if( !(anItem instanceof Folder) ) {
-                JenkinsJob jenkinsJob= new JenkinsJob(anItem);
-                allJobs.add(jenkinsJob.toJson());
+        if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            for (Item anItem : allProjects) {
+                if( !(anItem instanceof Folder) ) {
+                    JenkinsJob jenkinsJob= new JenkinsJob(anItem);
+                    allJobs.add(jenkinsJob.toJson());
 
-                CloudPublisher.uploadJobInfo(jenkinsJob.toJson());
+                    CloudPublisher.uploadJobInfo(jenkinsJob.toJson());
+                }
             }
         }
         return allJobs;

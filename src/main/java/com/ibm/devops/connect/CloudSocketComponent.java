@@ -82,6 +82,10 @@ public class CloudSocketComponent {
     }
 
     public void connectToAMQP() throws Exception {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            return;
+        }
+
         String syncId = getSyncId();
 
         ConnectionFactory factory = new ConnectionFactory();
