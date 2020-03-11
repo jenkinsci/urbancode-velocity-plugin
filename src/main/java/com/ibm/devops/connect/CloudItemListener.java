@@ -38,7 +38,9 @@ public class CloudItemListener extends ItemListener {
 
     public CloudItemListener(){
         logPrefix= logPrefix + "CloudItemListener ";
-        log.info(logPrefix + "CloudItemListener started...");
+        if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            log.info(logPrefix + "CloudItemListener started...");
+        }
     }
 
     @Override
@@ -57,19 +59,21 @@ public class CloudItemListener extends ItemListener {
     }
 
     private void handleEvent(Item item, String phase) {
-        if( !(item instanceof Folder) ) {
-            JenkinsJob jenkinsJob= new JenkinsJob(item);
-            log.info(ToStringBuilder.reflectionToString(jenkinsJob.toJson()) + " was " + phase);
-            CloudPublisher.uploadJobInfo(jenkinsJob.toJson());
+        if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            if( !(item instanceof Folder) ) {
+                JenkinsJob jenkinsJob= new JenkinsJob(item);
+                log.info(ToStringBuilder.reflectionToString(jenkinsJob.toJson()) + " was " + phase);
+                CloudPublisher.uploadJobInfo(jenkinsJob.toJson());
+            }
         }
     }
 
     public List<JSONObject> buildJobsList() {
-        log.info(logPrefix + "\n\n\tBuilding the list of Jenkins jobs...\n\n");
         List<Item> allProjects= JenkinsServer.getAllItems();
         List<JSONObject> allJobs = new ArrayList<JSONObject>();
 
         if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            log.info(logPrefix + "\n\n\tBuilding the list of Jenkins jobs...\n\n");
             for (Item anItem : allProjects) {
                 if( !(anItem instanceof Folder) ) {
                     JenkinsJob jenkinsJob= new JenkinsJob(anItem);

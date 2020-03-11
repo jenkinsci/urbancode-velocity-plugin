@@ -119,6 +119,7 @@ public class UploadDeployment extends Builder implements SimpleBuildStep {
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
     throws AbortException, InterruptedException, IOException {
         if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not upload deployments to Velocity as there is no configuration specified.");
             return;
         }
 

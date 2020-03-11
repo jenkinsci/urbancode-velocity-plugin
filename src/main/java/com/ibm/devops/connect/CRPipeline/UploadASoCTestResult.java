@@ -95,6 +95,7 @@ public class UploadASoCTestResult extends Notifier {
     throws AbortException, InterruptedException, IOException {
 
         if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not upload ASoC results to Velocity as there is no configuration specified.");
             return false;
         }
 

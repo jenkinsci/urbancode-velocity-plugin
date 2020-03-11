@@ -39,7 +39,7 @@ import java.io.IOException;
 
 @Extension
 public class CloudGraphListener implements GraphListener {
-	public static final Logger log = LoggerFactory.getLogger(CloudGraphListener.class);
+    public static final Logger log = LoggerFactory.getLogger(CloudGraphListener.class);
 
     public void onNewHead(FlowNode node) {
         FlowExecution execution = node.getExecution();

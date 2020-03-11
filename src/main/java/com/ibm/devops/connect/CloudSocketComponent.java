@@ -62,15 +62,17 @@ public class CloudSocketComponent {
     }
 
     public void connectToCloudServices() throws Exception {
-        logPrefix= logPrefix + "connectToCloudServices ";
+        if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            logPrefix= logPrefix + "connectToCloudServices ";
 
-        connectToAMQP();
+            connectToAMQP();
 
-        log.info(logPrefix + "Assembling list of Jenkins Jobs...");
+            log.info(logPrefix + "Assembling list of Jenkins Jobs...");
 
-        BuildJobsList buildJobList = new BuildJobsList();
-        BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj();
-        buildJobList.runAsJenkinsUser(paramObj);
+            BuildJobsList buildJobList = new BuildJobsList();
+            BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj();
+            buildJobList.runAsJenkinsUser(paramObj);
+        }
     }
 
     public static boolean isAMQPConnected() {
