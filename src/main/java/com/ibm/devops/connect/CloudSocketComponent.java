@@ -160,18 +160,18 @@ public class CloudSocketComponent {
                 channel.basicConsume(queueName, true, consumer);
             }else{
                 log.info("Queue not available, waiting to attempt reconnect");
-                Thread.sleep(5000);
                 connectToAMQP();
             }
         }
 
     }
 
-    public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException {
+    public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException, InterruptedException {
         try {
           channel.queueDeclarePassive(queueName);
           return true;
         } catch (IOException e) {
+          Thread.sleep(5000);
           return false;
         }
       }
