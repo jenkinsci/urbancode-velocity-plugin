@@ -74,16 +74,16 @@ public class CloudSocketComponent {
     }
 
     public static boolean isAMQPConnected() {
-    
+
         String syncId = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId();
         String syncToken = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
         String url = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getBaseUrl();
 
         boolean connected = CloudPublisher.testConnection(syncId, syncToken, url);
-        
+
         if (connected == false) {
             return false;
-        }        
+        }
 
         return conn.isOpen();
     }
@@ -162,10 +162,28 @@ public class CloudSocketComponent {
                 }
             };
 
-            channel.basicConsume(queueName, true, consumer);
+            if(queueIsAvailable(channel, queueName)){
+                channel.basicConsume(queueName, true, consumer);
+            }else{
+                log.info("Queue not available, waiting to attempt reconnect");
+                Thread.sleep(5000);
+                connectToAMQP();
+            }
         }
-        
+
     }
+
+    public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException {
+        try {
+          // check availability of the named queue
+          // if an error is encountered, including if the queue does not exist and if the
+          // queue is exclusively owned by another connection
+          channel.queueDeclarePassive(queueName);
+          return true;
+        } catch (IOException e) {
+          return false;
+        }
+      }
 
     private String removeTrailingSlash(String url) {
         if (url.endsWith("/")) {
