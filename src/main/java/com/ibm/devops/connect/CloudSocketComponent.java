@@ -169,9 +169,6 @@ public class CloudSocketComponent {
 
     public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException {
         try {
-          // check availability of the named queue
-          // if an error is encountered, including if the queue does not exist and if the
-          // queue is exclusively owned by another connection
           channel.queueDeclarePassive(queueName);
           return true;
         } catch (IOException e) {
