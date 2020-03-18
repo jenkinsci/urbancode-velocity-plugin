@@ -75,13 +75,7 @@ public class CloudSocketComponent {
 
     public static boolean isAMQPConnected() {
 
-        String syncId = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId();
-        String syncToken = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
-        String url = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getBaseUrl();
-
-        boolean connected = CloudPublisher.testConnection(syncId, syncToken, url);
-
-        if (connected == false) {
+        if (conn == null) {
             return false;
         }
 
