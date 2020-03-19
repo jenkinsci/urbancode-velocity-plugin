@@ -9,6 +9,7 @@
 package com.ibm.devops.connect;
 
 import hudson.slaves.ComputerListener;
+import jenkins.model.Jenkins;
 import hudson.model.Computer;
 import hudson.Extension;
 
@@ -33,7 +34,7 @@ public class ConnectComputerListener extends ComputerListener {
 
     @Override
     public void onOnline(Computer c) {
-        if ( c instanceof jenkins.model.Jenkins.MasterComputer ) {
+        if ( c instanceof jenkins.model.Jenkins.MasterComputer && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
             logPrefix= logPrefix + "onOnline ";
             String url = getConnectUrl();
 

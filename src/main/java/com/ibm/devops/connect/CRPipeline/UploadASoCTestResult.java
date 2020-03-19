@@ -9,51 +9,34 @@ package com.ibm.devops.connect.CRPipeline;
 
 import hudson.AbortException;
 import hudson.Extension;
-import hudson.FilePath;
-import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.model.AbstractProject;
-import hudson.remoting.VirtualChannel;
 import hudson.model.Result;
 import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.tasks.Builder;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.model.Job;
-import hudson.model.Build;
 import hudson.tasks.Notifier;
 import hudson.EnvVars;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.tasks.Publisher;
-import hudson.model.Cause;
-import hudson.model.Cause.UpstreamCause;
-import jenkins.tasks.SimpleBuildStep.LastBuildActionFactory;
-import hudson.model.Actionable;
 
 import java.lang.reflect.Method;
 import hudson.model.Action;
 import java.util.List;
 import java.lang.reflect.InvocationTargetException;
 
-import jenkins.tasks.SimpleBuildStep;
-
-import java.io.File;
+import jenkins.model.Jenkins;
 import java.io.IOException;
 import net.sf.json.JSONObject;
 
-import org.jenkinsci.remoting.RoleChecker;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-import java.util.Map;
-
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
 
 import com.ibm.devops.connect.CloudPublisher;
+import com.ibm.devops.connect.DevOpsGlobalConfiguration;
 
 public class UploadASoCTestResult extends Notifier {
 
@@ -109,7 +92,12 @@ public class UploadASoCTestResult extends Notifier {
 
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
-            throws AbortException, InterruptedException, IOException {
+    throws AbortException, InterruptedException, IOException {
+
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not upload ASoC results to Velocity as there is no configuration specified.");
+            return false;
+        }
 
         EnvVars envVars = build.getEnvironment(listener);
         // Resolving all passed ${VARIABLES}

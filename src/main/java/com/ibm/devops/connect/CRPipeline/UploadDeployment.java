@@ -22,6 +22,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import com.ibm.devops.connect.CloudPublisher;
+import com.ibm.devops.connect.DevOpsGlobalConfiguration;
 
 public class UploadDeployment extends Builder implements SimpleBuildStep {
 
@@ -115,7 +117,11 @@ public class UploadDeployment extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
-            throws AbortException, InterruptedException, IOException {
+    throws AbortException, InterruptedException, IOException {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not upload deployments to Velocity as there is no configuration specified.");
+            return;
+        }
 
         EnvVars envVars = build.getEnvironment(listener);
 
