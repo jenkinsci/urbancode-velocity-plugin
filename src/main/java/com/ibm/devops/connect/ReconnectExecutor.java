@@ -10,6 +10,7 @@ package com.ibm.devops.connect;
 
 import hudson.slaves.ComputerListener;
 import hudson.model.Computer;
+import hudson.model.Descriptor.FormException;
 import hudson.Extension;
 
 import org.slf4j.Logger;
@@ -39,23 +40,41 @@ public class ReconnectExecutor {
     }
 
     private class ReconnectRunner implements Runnable {
-
         @Override
         public void run()
         {
             try {
-                if (!cloudSocketInstance.isAMQPConnected()) {
-                    try {
-                        log.info("Reconnecting to AMQP");
-                        cloudSocketInstance.connectToAMQP();
-                    } catch (Exception e) {
-                        log.error("Unable to Reconnect to UCV AMQP", e);
+                if(checkIfConfigured()){
+                    if (!cloudSocketInstance.isAMQPConnected()) {
+                        try {
+                            log.info("Reconnecting to AMQP");
+                            cloudSocketInstance.connectToAMQP();
+                        } catch (Exception e) {
+                            log.error("Unable to Reconnect to UCV AMQP", e);
+                        }
                     }
                 }
-            }
+        }
             finally {
 
             }
+        }
+
+        private boolean checkIfConfigured(){
+
+            final DevOpsGlobalConfiguration config = new DevOpsGlobalConfiguration();
+
+            final String syncID = config.getSyncId();
+            final String syncToken = config.getSyncToken();
+            final String baseURL = config.getBaseUrl();
+
+            try{
+                config.doTestConnection(syncID, syncToken, baseURL);
+            } catch( FormException e ){
+                log.info("Plugin not configured correctly");
+                return false;
+            }
+            return true;
         }
     }
 }

@@ -157,6 +157,7 @@ public class CloudSocketComponent {
             };
 
             if(queueIsAvailable(channel, queueName)){
+                log.info("Queue is available, consuming...");
                 channel.basicConsume(queueName, true, consumer);
             }else{
                 log.info("Queue not available, waiting to attempt reconnect");
