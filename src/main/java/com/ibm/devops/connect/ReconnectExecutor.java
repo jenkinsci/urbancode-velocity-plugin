@@ -44,14 +44,13 @@ public class ReconnectExecutor {
         @Override
         public void run()
         {
-                if(checkIfConfigured()){
-                    if (!cloudSocketInstance.isAMQPConnected()) {
-                        try {
-                            log.info("Reconnecting to AMQP");
-                            cloudSocketInstance.connectToAMQP();
-                        } catch (Exception e) {
-                            log.error("Unable to Reconnect to UCV AMQP", e);
-                        }
+            if(checkIfConfigured()){
+                if (!cloudSocketInstance.isAMQPConnected()) {
+                    try {
+                        log.info("Reconnecting to AMQP");
+                        cloudSocketInstance.connectToAMQP();
+                    } catch (Exception e) {
+                        log.error("Unable to Reconnect to UCV AMQP", e);
                     }
                 }
             }
@@ -64,12 +63,13 @@ public class ReconnectExecutor {
             final String syncToken = config.getSyncToken();
             final String baseURL = config.getBaseUrl();
 
-            try {
+            try{
                 config.doTestConnection(syncID, syncToken, baseURL);
-            } catch (FormException e) {
+            } catch( FormException e ){
                 log.info("Plugin not configured correctly");
                 return false;
             }
             return true;
         }
     }
+}

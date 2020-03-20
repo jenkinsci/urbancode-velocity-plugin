@@ -76,7 +76,6 @@ public class CloudSocketComponent {
     }
 
     public static boolean isAMQPConnected() {
-
         if (conn == null) {
             return false;
         }
