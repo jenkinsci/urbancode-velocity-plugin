@@ -54,14 +54,12 @@ public class ReconnectExecutor {
                         }
                     }
                 }
-        }
+            }
             finally {
-
             }
         }
 
         private boolean checkIfConfigured(){
-
             final DevOpsGlobalConfiguration config = new DevOpsGlobalConfiguration();
 
             final String syncID = config.getSyncId();

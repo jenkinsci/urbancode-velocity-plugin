@@ -164,7 +164,6 @@ public class CloudSocketComponent {
                 connectToAMQP();
             }
         }
-
     }
 
     public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException, InterruptedException {
