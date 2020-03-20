@@ -32,6 +32,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import com.ibm.devops.connect.CloudPublisher;
+import com.ibm.devops.connect.DevOpsGlobalConfiguration;
 
 public class UploadBuild extends Builder implements SimpleBuildStep {
 
@@ -100,7 +101,11 @@ public class UploadBuild extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
-            throws AbortException, InterruptedException, IOException {
+    throws AbortException, InterruptedException, IOException {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not upload builds to Velocity as there is no configuration specified.");
+            return;
+        }
 
         EnvVars envVars = build.getEnvironment(listener);
 

@@ -14,36 +14,21 @@
 
 package com.ibm.devops.connect;
 
-import java.util.Map;
-
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.*;
-import hudson.model.BuildStepListener;
-import hudson.tasks.BuildStep;
-import hudson.model.AbstractBuild;
-import hudson.tasks.Builder;
-import hudson.model.Result;
 
 import jenkins.model.Jenkins;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.HashSet;
-
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.json.JSONObject;
-import net.sf.json.JSONArray;
 
-import com.ibm.devops.connect.CloudCause.JobStatus;
 
 import org.jenkinsci.plugins.workflow.flow.GraphListener;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
-import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
@@ -54,7 +39,7 @@ import java.io.IOException;
 
 @Extension
 public class CloudGraphListener implements GraphListener {
-	public static final Logger log = LoggerFactory.getLogger(CloudGraphListener.class);
+    public static final Logger log = LoggerFactory.getLogger(CloudGraphListener.class);
 
     public void onNewHead(FlowNode node) {
         FlowExecution execution = node.getExecution();
@@ -81,7 +66,7 @@ public class CloudGraphListener implements GraphListener {
         boolean isEndNode = node.getClass().getName().equals("org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode");
         boolean isPauseNode = PauseAction.isPaused(node);
 
-        if(isStartNode || isEndNode || isPauseNode) {
+        if ((isStartNode || isEndNode || isPauseNode) && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
             JenkinsPipelineStatus status = new JenkinsPipelineStatus(workflowRun, cloudCause, node, listener, isStartNode, isPauseNode);
             JSONObject statusUpdate = status.generate(false);
             CloudPublisher.uploadJobStatus(statusUpdate);

@@ -18,6 +18,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 
 import java.io.IOException;
@@ -28,6 +29,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import com.ibm.devops.connect.CloudPublisher;
+import com.ibm.devops.connect.DevOpsGlobalConfiguration;
 import com.ibm.devops.connect.Endpoints.EndpointManager;
 
 public class CheckGate extends Builder implements SimpleBuildStep {
@@ -62,7 +64,11 @@ public class CheckGate extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
-            throws AbortException, InterruptedException, IOException, RuntimeException {
+    throws AbortException, InterruptedException, IOException, RuntimeException {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not check Velocity gates as there is no configuration specified.");
+            return;
+        }
 
         EnvVars envVars = build.getEnvironment(listener);
 

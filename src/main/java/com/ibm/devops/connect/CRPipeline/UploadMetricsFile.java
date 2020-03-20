@@ -126,7 +126,11 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
-            throws AbortException, InterruptedException, IOException {
+    throws AbortException, InterruptedException, IOException {
+        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+            listener.getLogger().println("Could not metrics file to Velocity as there is no configuration specified.");
+            return;
+        }
 
         EnvVars envVars = build.getEnvironment(listener);
 
