@@ -44,7 +44,6 @@ public class ReconnectExecutor {
         @Override
         public void run()
         {
-            try {
                 if(checkIfConfigured()){
                     if (!cloudSocketInstance.isAMQPConnected()) {
                         try {
@@ -55,8 +54,6 @@ public class ReconnectExecutor {
                         }
                     }
                 }
-            }
-            finally {
             }
         }
 
