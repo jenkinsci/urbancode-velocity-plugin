@@ -45,7 +45,7 @@ public class ReconnectExecutor {
         public void run()
         {
             try {
-                if(checkIfConfigured()){
+                if (checkIfConfigured()) {
                     if (!cloudSocketInstance.isAMQPConnected()) {
                         try {
                             log.info("Reconnecting to AMQP");
@@ -67,9 +67,9 @@ public class ReconnectExecutor {
             final String syncToken = config.getSyncToken();
             final String baseURL = config.getBaseUrl();
 
-            try{
+            try {
                 config.doTestConnection(syncID, syncToken, baseURL);
-            } catch( FormException e ){
+            } catch (FormException e) {
                 log.info("Plugin not configured correctly");
                 return false;
             }
