@@ -84,6 +84,10 @@ public class CloudSocketComponent {
     }
 
     public void connectToAMQP() throws Exception {
+        connectToAMQP(0);
+    }
+
+    public void connectToAMQP(int retryCount) throws Exception{
         if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
             return;
         }
@@ -129,6 +133,8 @@ public class CloudSocketComponent {
         // Synchronized to protect manipulation of static variable
         synchronized (this) {
 
+            int maxRetryCount = 20;
+
             if(this.conn != null && this.conn.isOpen()) {
                 this.conn.abort();
             }
@@ -166,9 +172,12 @@ public class CloudSocketComponent {
             if (queueIsAvailable(channel, queueName)) {
                 log.info("Queue is available, consuming...");
                 channel.basicConsume(queueName, true, consumer);
+            } else if (retryCount > maxRetryCount) {
+                log.error("Maximum retry count for attempts to reconnect reached");
             } else {
                 log.info("Queue not available, waiting to attempt reconnect");
-                connectToAMQP();
+                retryCount++;
+                connectToAMQP(retryCount);
             }
         }
     }
