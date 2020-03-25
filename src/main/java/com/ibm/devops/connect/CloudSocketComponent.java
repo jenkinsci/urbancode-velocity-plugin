@@ -91,6 +91,8 @@ public class CloudSocketComponent {
         String syncId = getSyncId();
 
         ConnectionFactory factory = new ConnectionFactory();
+        factory.setAutomaticRecoveryEnabled(false);
+
         EndpointManager em = new EndpointManager();
 
         // Public Jenkins Client Credentials
