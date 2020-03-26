@@ -8,11 +8,6 @@
  *******************************************************************************/
 package com.ibm.devops.connect;
 
-import hudson.slaves.ComputerListener;
-import hudson.model.Computer;
-import hudson.model.Descriptor.FormException;
-import hudson.Extension;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
