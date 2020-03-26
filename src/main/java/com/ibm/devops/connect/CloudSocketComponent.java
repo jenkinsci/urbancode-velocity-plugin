@@ -134,7 +134,6 @@ public class CloudSocketComponent {
             }
 
             conn = factory.newConnection();
-            factory.setAutomaticRecoveryEnabled(false);
 
             Channel channel = conn.createChannel();
 

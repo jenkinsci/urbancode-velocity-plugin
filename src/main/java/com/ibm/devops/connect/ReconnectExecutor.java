@@ -44,32 +44,13 @@ public class ReconnectExecutor {
         @Override
         public void run()
         {
-            if (checkIfConfigured()) {
-                if (!cloudSocketInstance.isAMQPConnected()) {
-                    try {
-                        log.info("Reconnecting to AMQP");
-                        cloudSocketInstance.connectToAMQP();
-                    } catch (Exception e) {
-                        log.error("Unable to Reconnect to UCV AMQP", e);
-                    }
+           if (!cloudSocketInstance.isAMQPConnected() && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+                try {
+                    cloudSocketInstance.connectToAMQP();
+                } catch (Exception e) {
+                    log.error("Unable to Reconnect to UCV AMQP", e);
                 }
             }
-        }
-
-        private boolean checkIfConfigured(){
-            final DevOpsGlobalConfiguration config = new DevOpsGlobalConfiguration();
-
-            final String syncID = config.getSyncId();
-            final String syncToken = config.getSyncToken();
-            final String baseURL = config.getBaseUrl();
-
-            try {
-                config.doTestConnection(syncID, syncToken, baseURL);
-            } catch (FormException e) {
-                log.info("Plugin not configured correctly");
-                return false;
-            }
-            return true;
         }
     }
 }
