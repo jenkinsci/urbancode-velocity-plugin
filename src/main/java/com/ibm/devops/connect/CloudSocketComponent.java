@@ -38,7 +38,7 @@ public class CloudSocketComponent {
 
     private static Connection conn;
 
-    private static Boolean queueIsAvailable = false;
+    private static boolean queueIsAvailable = false;
     private static boolean otherIntegrationExists = false;
 
     private static void setOtherIntegrationsExists(boolean exists) {
@@ -178,8 +178,9 @@ public class CloudSocketComponent {
           queueIsAvailable = true;
           return true;
         } catch (IOException e) {
-          return false;
+            log.error("Checking Queue availability threw exception: ", e);
         }
+        return false;
       }
 
     private String removeTrailingSlash(String url) {
