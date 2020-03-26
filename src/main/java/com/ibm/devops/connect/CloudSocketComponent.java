@@ -38,6 +38,7 @@ public class CloudSocketComponent {
 
     private static Connection conn;
 
+    private static Boolean queueIsAvailable = false;
     private static boolean otherIntegrationExists = false;
 
     private static void setOtherIntegrationsExists(boolean exists) {
@@ -76,10 +77,9 @@ public class CloudSocketComponent {
     }
 
     public static boolean isAMQPConnected() {
-        if (conn == null) {
+        if (conn == null || queueIsAvailable == false) {
             return false;
         }
-
         return conn.isOpen();
     }
 
@@ -134,6 +134,7 @@ public class CloudSocketComponent {
             }
 
             conn = factory.newConnection();
+            factory.setAutomaticRecoveryEnabled(false);
 
             Channel channel = conn.createChannel();
 
@@ -163,22 +164,21 @@ public class CloudSocketComponent {
                 }
             };
 
-            if (queueIsAvailable(channel, queueName)) {
-                log.info("Queue is available, consuming...");
+            if (checkQueueAvailability(channel, queueName)) {
                 channel.basicConsume(queueName, true, consumer);
-            } else {
-                log.info("Queue not available, waiting to attempt reconnect");
-                connectToAMQP();
+            }else{
+                log.info("Queue is not yet available, will attempt to reconect shortly...");
+                queueIsAvailable = false;
             }
         }
     }
 
-    public static boolean queueIsAvailable(Channel channel, String queueName) throws IOException, InterruptedException {
+    public static boolean checkQueueAvailability(Channel channel, String queueName) throws IOException {
         try {
           channel.queueDeclarePassive(queueName);
+          queueIsAvailable = true;
           return true;
         } catch (IOException e) {
-          Thread.sleep(5000);
           return false;
         }
       }
