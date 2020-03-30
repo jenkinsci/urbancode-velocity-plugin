@@ -22,7 +22,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.Builder;
 import hudson.tasks.BuildStepDescriptor;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 
 import java.io.IOException;
