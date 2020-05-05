@@ -116,6 +116,7 @@ public abstract class AbstractJenkinsStatus {
             result.put("url", Jenkins.getInstance().getRootUrl() + run.getUrl());
             result.put("jobExternalId", getJobUniqueIdFromBuild());
             result.put("name", run.getDisplayName());
+            result.put("startTime", run.getStartTimeInMillis());
         } else {
             result.put("url", Jenkins.getInstance().getRootUrl());
             result.put("name", "Job Error");
@@ -253,6 +254,7 @@ public abstract class AbstractJenkinsStatus {
 
         result.put("status", status);
         result.put("timestamp", System.currentTimeMillis());
+        result.put("startTime", run.getStartTimeInMillis());
         result.put("syncId", Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId());
         result.put("name", run.getDisplayName());
         result.put("steps", cloudCause.getStepsArray());
