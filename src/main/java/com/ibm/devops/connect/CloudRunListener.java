@@ -56,6 +56,7 @@ public class CloudRunListener extends RunListener<Run> {
             } else {
                 status = new JenkinsJobStatus(run, cloudCause, null, listener, true, false);
             }
+            status.setRunStatus(true);
             JSONObject statusUpdate = status.generate(false);
             CloudPublisher.uploadJobStatus(statusUpdate);
         }
@@ -75,6 +76,7 @@ public class CloudRunListener extends RunListener<Run> {
             } else {
                 status = new JenkinsJobStatus(run, cloudCause, null, listener, false, false);
             }
+            status.setRunStatus(true);
             JSONObject statusUpdate = status.generate(true);
             CloudPublisher.uploadJobStatus(statusUpdate);
         }
