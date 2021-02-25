@@ -24,13 +24,13 @@
     <f:entry title="App Name (one of three required)" field="appName">
         <f:textbox />
     </f:entry>
+    <f:entry title="Version Name" field="versionName">
+        <f:textbox />
+    </f:entry>
+    <f:entry title="Version External ID" field="versionExtId">
+        <f:textbox />
+    </f:entry>
     <f:advanced>
-        <f:entry title="Version Name" field="versionName">
-            <f:textbox />
-        </f:entry>
-        <f:entry title="Version External ID" field="versionExtId">
-            <f:textbox />
-        </f:entry>
         <f:entry title="Description" field="description">
             <f:textbox />
         </f:entry>
