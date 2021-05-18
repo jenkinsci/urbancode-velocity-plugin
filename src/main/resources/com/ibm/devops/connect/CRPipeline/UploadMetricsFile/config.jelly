@@ -36,6 +36,9 @@
     <f:entry title="MetricDefinition ID" field="metricDefinitionId">
         <f:textbox />
     </f:entry>
+    <f:entry title="Execution Date" field="executionDate">
+        <f:textbox />
+    </f:entry>
     <f:entry title="Build ID" field="buildId">
         <f:textbox />
     </f:entry>

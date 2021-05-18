@@ -55,6 +55,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
     private String metricDefinitionId;
     private String metricsRecordUrl;
     private String description;
+    private String executionDate;
     private String buildId;
     private String buildUrl;
     private String appId;
@@ -77,6 +78,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         String metricDefinitionId,
         String metricsRecordUrl,
         String description,
+        String executionDate,
         String buildId,
         String buildUrl,
         String appId,
@@ -97,6 +99,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         this.metricDefinitionId = metricDefinitionId;
         this.metricsRecordUrl = metricsRecordUrl;
         this.description = description;
+        this.executionDate = executionDate;
         this.buildId = buildId;
         this.buildUrl = buildUrl;
         this.appId = appId;
@@ -118,6 +121,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
     public String getMetricDefinitionId() { return this.metricDefinitionId; }
     public String getMetricsRecordUrl() { return this.metricsRecordUrl; }
     public String getDescription() { return this.description; }
+    public String getExecutionDate() { return this.executionDate; }
     public String getBuildId() { return this.buildId; }
     public String getBuildUrl() { return this.buildUrl; }
     public String getAppId() { return this.appId; }
@@ -150,6 +154,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         String combineTestSuites = envVars.expand(this.combineTestSuites == null ? "" : this.combineTestSuites.toString());
         String fatal = envVars.expand(this.fatal == null ? "" : this.fatal.toString());
         String debug = envVars.expand(this.debug == null ? "" : this.debug.toString());
+        String executionDate = envVars.expand(this.executionDate);
         String buildId = envVars.expand(this.buildId);
         String buildUrl = envVars.expand(this.buildUrl);
 
@@ -190,6 +195,9 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         }
         if (description != null && !description.equals("")) {
             record.put("description", description);
+        }
+        if (executionDate != null && !executionDate.equals("")) {
+            record.put("executionDate", executionDate);
         }
         payload.put("record", record);
 
