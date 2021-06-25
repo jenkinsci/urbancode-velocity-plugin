@@ -168,6 +168,7 @@ public class CloudPublisher  {
      */
     public static void uploadJobInfo(JSONObject jobJson) {
         String url = CloudPublisher.getSyncApiUrl() + JENKINS_JOB_ENDPOINT_URL;
+        String localLogPrefix= logPrefix + "uploadJobInfo ";
 
         JSONArray payload = new JSONArray();
         payload.add(jobJson);
@@ -176,11 +177,14 @@ public class CloudPublisher  {
         System.out.println(url);
         System.out.println(jobJson.toString());
 
+        log.info(localLogPrefix + url);
         CloudPublisher.postToSyncAPI(url, payload.toString());
     }
 
     public static void uploadJobStatus(JSONObject jobStatus) {
         String url = CloudPublisher.getSyncApiUrl() + JENKINS_JOB_STATUS_ENDPOINT_URL;
+        String localLogPrefix= logPrefix + "uploadJobStatus ";
+        log.info(localLogPrefix + url);
         CloudPublisher.postToSyncAPI(url, jobStatus.toString());
     }
 
@@ -379,6 +383,7 @@ public class CloudPublisher  {
             attachHeaders(postMethod);
             postMethod.setHeader("Content-Type", "application/json");
             StringEntity data = new StringEntity(payload);
+            log.info(localLogPrefix + "Payload" + data);
             postMethod.setEntity(data);
 
             asyncHttpClient.execute(postMethod, new FutureCallback<HttpResponse>() {
@@ -410,7 +415,9 @@ public class CloudPublisher  {
                 }
             });
         } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            log.error("UnsupportedEncodingException trying to post job data to velocity", e);
+        } catch (Exception e) {
+            log.error("Error trying to post job data to velocity", e);
         }
     }
 

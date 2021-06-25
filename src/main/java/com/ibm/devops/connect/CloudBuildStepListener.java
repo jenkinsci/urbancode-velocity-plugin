@@ -34,6 +34,7 @@ import com.ibm.devops.connect.Status.JenkinsJobStatus;
 @Extension
 public class CloudBuildStepListener extends BuildStepListener {
     public static final Logger log = LoggerFactory.getLogger(CloudBuildStepListener.class);
+	private static String logPrefix= "[UrbanCode Velocity] CloudBuildStepListener#";
 
     public void finished(AbstractBuild build, BuildStep bs, BuildListener listener, boolean canContinue) {
         if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
@@ -43,6 +44,7 @@ public class CloudBuildStepListener extends BuildStepListener {
             }
             JenkinsJobStatus status = new JenkinsJobStatus(build, cloudCause, bs, listener, false, !canContinue);
             JSONObject statusUpdate = status.generate(false);
+            log.info(logPrefix + statusUpdate);
             CloudPublisher.uploadJobStatus(statusUpdate);
         }
     }

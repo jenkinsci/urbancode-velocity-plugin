@@ -41,6 +41,7 @@ import com.ibm.devops.connect.Status.JenkinsPipelineStatus;
 @Extension
 public class CloudRunListener extends RunListener<Run> {
     public static final Logger log = LoggerFactory.getLogger(CloudRunListener.class);
+    private static String logPrefix= "[UrbanCode Velocity] CloudRunListener#";
 
     @Override
     public void onStarted(Run run, TaskListener listener) {
@@ -78,6 +79,7 @@ public class CloudRunListener extends RunListener<Run> {
             }
             status.setRunStatus(true);
             JSONObject statusUpdate = status.generate(true);
+            log.info(logPrefix + statusUpdate);
             CloudPublisher.uploadJobStatus(statusUpdate);
         }
     }
