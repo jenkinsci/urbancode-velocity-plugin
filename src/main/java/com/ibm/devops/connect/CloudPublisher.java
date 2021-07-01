@@ -410,9 +410,9 @@ public class CloudPublisher  {
                 }
             });
         } catch (UnsupportedEncodingException e) {
-            log.error("UnsupportedEncodingException trying to post job data to velocity", e);
+            log.error("UnsupportedEncodingException trying to post job data", e);
         } catch (Exception e) {
-            log.error("Error trying to post job data to velocity", e);
+            log.error("Error trying to post job data", e);
         }
     }
 
