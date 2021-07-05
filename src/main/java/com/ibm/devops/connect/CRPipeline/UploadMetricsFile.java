@@ -38,6 +38,12 @@ import org.apache.http.entity.ContentType;
 
 import com.ibm.devops.connect.CloudPublisher;
 import com.ibm.devops.connect.DevOpsGlobalConfiguration;
+import com.ibm.devops.connect.Entry;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import hudson.util.ListBoxModel;
+import org.kohsuke.stapler.QueryParameter;
+import java.util.ArrayList;
 
 public class UploadMetricsFile extends Builder implements SimpleBuildStep {
 
@@ -61,6 +67,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
     private String appId;
     private String appName;
     private String appExtId;
+    private String instanceBaseUrl;
 
     @DataBoundConstructor
     public UploadMetricsFile(
@@ -83,7 +90,8 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         String buildUrl,
         String appId,
         String appName,
-        String appExtId
+        String appExtId,
+        String instanceBaseUrl
     ) {
         this.tenantId = tenantId;
         this.name = name;
@@ -105,6 +113,7 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         this.appId = appId;
         this.appName = appName;
         this.appExtId = appExtId;
+        this.instanceBaseUrl = instanceBaseUrl;
     }
 
     public String getTenantId() { return this.tenantId; }
@@ -127,15 +136,11 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
     public String getAppId() { return this.appId; }
     public String getAppName() { return this.appName; }
     public String getAppExtId() { return this.appExtId; }
+    public String getInstanceBaseUrl() { return this.instanceBaseUrl; }
 
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
     throws AbortException, InterruptedException, IOException {
-        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-            listener.getLogger().println("Could not metrics file to Velocity as there is no configuration specified.");
-            return;
-        }
-
         EnvVars envVars = build.getEnvironment(listener);
 
         String testSetName = envVars.expand(this.testSetName);
@@ -157,6 +162,30 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         String executionDate = envVars.expand(this.executionDate);
         String buildId = envVars.expand(this.buildId);
         String buildUrl = envVars.expand(this.buildUrl);
+        String instanceBaseUrl = envVars.expand(this.instanceBaseUrl == null ? "" : this.instanceBaseUrl.toString());
+
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        int instanceNum = 0;
+        if(instanceBaseUrl.equals("Upload Metric File to All UCV Instances")){
+            instanceNum = -1;
+        }else if(StringUtils.isNotEmpty(instanceBaseUrl)){
+            try {
+                int i=0;
+                for (Entry entry : entries) {
+                    if(removeTrailingSlash(instanceBaseUrl).equals(removeTrailingSlash(entry.getBaseUrl()))){
+                        instanceNum = i;
+                        break;
+                    }
+                    i=i+1;
+                }
+            } catch (NumberFormatException nfe) {
+                listener.getLogger().println("Provided UCV Instance BaseUrl : ("+instanceBaseUrl+") for Upload Metric File is not vaild.");
+                return;
+            }
+        }else{
+            instanceNum = -1;
+            listener.getLogger().println("UCV Instance BaseUrl is not provided for Upload Metric File.  Using default: Upload Metric File to All UCV Instances");
+        }
 
         JSONObject payload = new JSONObject();
 
@@ -221,30 +250,66 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         }
         System.out.println("TEST payload: " + payload.toString(2));
 
-        listener.getLogger().println("Uploading metric \"" + name + "\" to UrbanCode Velocity...");
+        if(instanceNum == -1){
+            int i = 0;
+            for (Entry entry : entries) {
 
-        String userAccessKey = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getApiToken();
-
-        boolean success = workspace.act(new FileUploader(filePath, payload.toString(), listener, CloudPublisher.getQualityDataUrl(), userAccessKey));
-        if (!success) {
-            listener.getLogger().println("Problem uploading metrics file to UrbanCode Velocity.");
-            if (fatal.equals("true")) {
-                if (debug.equals("true")) {
-                    listener.getLogger().println("Failing build due to fatal=true.");
+                listener.getLogger().println("Uploading metric \"" + name + "\" to UrbanCode Velocity (" + entry.getBaseUrl() + ").");
+                if (!entry.isConfigured()) {
+                    listener.getLogger().println("Could not upload metric file to Velocity as there is no configuration specified.");
+                    return;
                 }
-                build.setResult(Result.FAILURE);
-            } else if (fatal.equals("false")) {
-                if (debug.equals("true")) {
-                    listener.getLogger().println("Not changing build result due to fatal=false.");
+                boolean success = workspace.act(new FileUploader(filePath, payload.toString(), listener, CloudPublisher.getQualityDataUrl(i), entry.getApiToken(), i));
+                if (!success) {
+                    listener.getLogger().println("Problem uploading metrics file to UrbanCode Velocity (" + entry.getBaseUrl() + ").");
+                    if (fatal.equals("true")) {
+                        if (debug.equals("true")) {
+                            listener.getLogger().println("Failing build due to fatal=true (" + entry.getBaseUrl() + ").");
+                        }
+                        build.setResult(Result.FAILURE);
+                    } else if (fatal.equals("false")) {
+                        if (debug.equals("true")) {
+                            listener.getLogger().println("Not changing build result due to fatal=false (" + entry.getBaseUrl() + ").");
+                        }
+                    } else {
+                        if (debug.equals("true")) {
+                            listener.getLogger().println("Marking build as unstable due to fatal flag not set (" + entry.getBaseUrl() + ").");
+                        }
+                        build.setResult(Result.UNSTABLE);
+                    }
+                } else {
+                    listener.getLogger().println("Successfully uploaded metric file to UrbanCode Velocity (" + entry.getBaseUrl() + ").");
+                }
+                i = i + 1;
+            }
+        } else{
+
+            listener.getLogger().println("Uploading metric \"" + name + "\" to UrbanCode Velocity (" + entries.get(instanceNum).getBaseUrl() + ").");
+            if (!entries.get(instanceNum).isConfigured()) {
+                listener.getLogger().println("Could not upload metric file to Velocity as there is no configuration specified.");
+                return;
+            }
+            boolean success = workspace.act(new FileUploader(filePath, payload.toString(), listener, CloudPublisher.getQualityDataUrl(instanceNum), entries.get(instanceNum).getApiToken(), instanceNum));
+            if (!success) {
+                listener.getLogger().println("Problem uploading metrics file to UrbanCode Velocity (" + entries.get(instanceNum).getBaseUrl() + ").");
+                if (fatal.equals("true")) {
+                    if (debug.equals("true")) {
+                        listener.getLogger().println("Failing build due to fatal=true (" + entries.get(instanceNum).getBaseUrl() + ").");
+                    }
+                    build.setResult(Result.FAILURE);
+                } else if (fatal.equals("false")) {
+                    if (debug.equals("true")) {
+                        listener.getLogger().println("Not changing build result due to fatal=false (" + entries.get(instanceNum).getBaseUrl() + ").");
+                    }
+                } else {
+                    if (debug.equals("true")) {
+                        listener.getLogger().println("Marking build as unstable due to fatal flag not set (" + entries.get(instanceNum).getBaseUrl() + ").");
+                    }
+                    build.setResult(Result.UNSTABLE);
                 }
             } else {
-                if (debug.equals("true")) {
-                    listener.getLogger().println("Marking build as unstable due to fatal flag not set.");
-                }
-                build.setResult(Result.UNSTABLE);
+                listener.getLogger().println("Successfully uploaded metric file to UrbanCode Velocity (" + entries.get(instanceNum).getBaseUrl() + ").");
             }
-        } else {
-            listener.getLogger().println("Successfully uploaded metric file to UrbanCode Velocity.");
         }
     }
 
@@ -276,6 +341,19 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
+
+        public ListBoxModel doFillInstanceBaseUrlItems(@QueryParameter String currentInstanceBaseUrl) {
+            // Create ListBoxModel from all projects for this AWS Device Farm account.
+            List<ListBoxModel.Option> baseUrls = new ArrayList<ListBoxModel.Option>();
+            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+            String all = "Upload Metric File to All UCV Instances";
+            baseUrls.add(new ListBoxModel.Option(all, all, all.equals(currentInstanceBaseUrl)));
+            for (Entry entry : entries) {
+                // We don't ignore case because these *should* be unique.
+                baseUrls.add(new ListBoxModel.Option(entry.getBaseUrl(), entry.getBaseUrl(), entry.getBaseUrl().equals(currentInstanceBaseUrl)));
+            }
+            return new ListBoxModel(baseUrls);
+        }
     }
 
     private static final class FileUploader implements FileCallable<Boolean> {
@@ -285,13 +363,15 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         private String postUrl;
         private String userAccessKey;
         private TaskListener listener;
+        private int instanceNum;
 
-        public FileUploader(String filePath, String payload, TaskListener listener, String postUrl, String userAccessKey) {
+        public FileUploader(String filePath, String payload, TaskListener listener, String postUrl, String userAccessKey, int instanceNum) {
             this.filePath = filePath;
             this.payload = payload;
             this.listener = listener;
             this.postUrl = postUrl;
             this.userAccessKey = userAccessKey;
+            this.instanceNum = instanceNum;
         }
 
         @Override public Boolean invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
@@ -311,11 +391,12 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
                 .build();
 
             boolean success = false;
+            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
             try {
-                success = CloudPublisher.uploadQualityData(entity, postUrl, userAccessKey);
+                success = CloudPublisher.uploadQualityData(entity, postUrl, userAccessKey, instanceNum);
             } catch (Exception ex) {
-                listener.error("Error uploading metric file: " + ex.getClass() + " - " + ex.getMessage());
-                listener.error("Stack trace:");
+                listener.error("Error uploading metric file (" + entries.get(instanceNum).getBaseUrl() + "): " + ex.getClass() + " - " + ex.getMessage());
+                listener.error("Stack trace (" + entries.get(instanceNum).getBaseUrl() + "):");
                 StackTraceElement[] elements = ex.getStackTrace();
                 for (int i = 0; i < elements.length; i++) {
                     StackTraceElement s = elements[i];
@@ -331,5 +412,12 @@ public class UploadMetricsFile extends Builder implements SimpleBuildStep {
         public void checkRoles(RoleChecker checker) throws SecurityException {
             // no-op
         }
+    }
+
+    private String removeTrailingSlash(String url) {
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 }

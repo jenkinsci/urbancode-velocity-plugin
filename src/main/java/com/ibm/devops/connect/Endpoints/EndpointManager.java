@@ -12,43 +12,47 @@ public class EndpointManager {
         endpointProvider = new EndpointsVelocity();
     }
 
-    public String getSyncApiEndpoint() {
-        return endpointProvider.getSyncApiEndpoint();
+    public String getSyncApiEndpoint(int instanceNum) {
+        return endpointProvider.getSyncApiEndpoint(instanceNum);
     }
 
-    public String getPipelinesEndpoint() {
-        return endpointProvider.getPipelinesEndpoint();
+    public String getGraphqlApiEndpoint(int instanceNum) {
+        return endpointProvider.getGraphqlApiEndpoint(instanceNum);
     }
 
-    public String getQualityDataEndpoint() {
-        return endpointProvider.getQualityDataEndpoint();
+    public String getPipelinesEndpoint(int instanceNum) {
+        return endpointProvider.getPipelinesEndpoint(instanceNum);
     }
 
-    public String getQualityDataRawEndpoint() {
-        return endpointProvider.getQualityDataRawEndpoint();
+    public String getQualityDataEndpoint(int instanceNum) {
+        return endpointProvider.getQualityDataEndpoint(instanceNum);
+    }
+
+    public String getQualityDataRawEndpoint(int instanceNum) {
+        return endpointProvider.getQualityDataRawEndpoint(instanceNum);
     }
 
     public String getSyncApiEndpoint(String baseUrl) {
         return endpointProvider.getSyncApiEndpoint(baseUrl);
     }
 
-    public String getReleaseEvensApiEndpoint() {
-        return endpointProvider.getReleaseEvensApiEndpoint();
+    public String getReleaseEvensApiEndpoint(int instanceNum) {
+        return endpointProvider.getReleaseEvensApiEndpoint(instanceNum);
     }
 
-    public String getDotsEndpoint() {
-        return endpointProvider.getDotsEndpoint();
+    public String getDotsEndpoint(int instanceNum) {
+        return endpointProvider.getDotsEndpoint(instanceNum);
     }
 
-    public String getSyncStoreEndpoint() {
-        return endpointProvider.getSyncStoreEndpoint();
+    public String getSyncStoreEndpoint(int instanceNum) {
+        return endpointProvider.getSyncStoreEndpoint(instanceNum);
     }
 
-    public String getConnectEndpoint() {
-        return endpointProvider.getConnectEndpoint();
+    public String getConnectEndpoint(int instanceNum) {
+        return endpointProvider.getConnectEndpoint(instanceNum);
     }
 
-    public String getVelocityHostname() {
-        return endpointProvider.getVelocityHostname();
+    public String getVelocityHostname(int instanceNum) {
+        return endpointProvider.getVelocityHostname(instanceNum);
     }
 }

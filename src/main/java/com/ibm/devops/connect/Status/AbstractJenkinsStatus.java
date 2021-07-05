@@ -49,6 +49,8 @@ import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredenti
 import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import org.apache.http.client.utils.URIBuilder;
+import com.ibm.devops.connect.Entry;
+import java.util.List;
 
 public abstract class AbstractJenkinsStatus {
     public static final Logger log = LoggerFactory.getLogger(AbstractJenkinsStatus.class);
@@ -114,14 +116,15 @@ public abstract class AbstractJenkinsStatus {
         }
     }
 
-    public JSONObject generateErrorStatus(String errorMessage) {
+    public JSONObject generateErrorStatus(String errorMessage, int instanceNum) {
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
         JSONObject result = new JSONObject();
 
         cloudCause.addStep("Error: " + errorMessage, JobStatus.failure.toString(), "Failed due to error", true);
 
         result.put("status", JobStatus.failure.toString());
         result.put("timestamp", System.currentTimeMillis());
-        result.put("syncId", Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId());
+        result.put("syncId", entries.get(instanceNum).getSyncId());
         result.put("steps", cloudCause.getStepsArray());
         result.put("returnProps", cloudCause.getReturnProps());
 
@@ -243,7 +246,8 @@ public abstract class AbstractJenkinsStatus {
         }
     }
 
-    public JSONObject generate(boolean completed) {
+    public JSONObject generate(boolean completed, int instanceNum) {
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
         JSONObject result = new JSONObject();
 
         evaluateSourceData();
@@ -268,7 +272,7 @@ public abstract class AbstractJenkinsStatus {
         result.put("status", status);
         result.put("timestamp", System.currentTimeMillis());
         result.put("startTime", run.getStartTimeInMillis());
-        result.put("syncId", Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId());
+        result.put("syncId", entries.get(instanceNum).getSyncId());
         result.put("name", run.getDisplayName());
         result.put("steps", cloudCause.getStepsArray());
         result.put("url", Jenkins.getInstance().getRootUrl() + run.getUrl());
@@ -325,7 +329,7 @@ public abstract class AbstractJenkinsStatus {
         } catch (UnirestException e) {
             log.error("UnirestException: Failed to get details of requestor", e);
         }
-        // log.info(result.toString());
+        //log.info(result.toString());
         return result;
     }
 

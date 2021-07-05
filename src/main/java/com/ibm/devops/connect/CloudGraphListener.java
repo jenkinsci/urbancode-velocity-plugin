@@ -36,6 +36,7 @@ import org.jenkinsci.plugins.workflow.support.actions.PauseAction;
 import com.ibm.devops.connect.Status.JenkinsPipelineStatus;
 
 import java.io.IOException;
+import java.util.List;
 
 @Extension
 public class CloudGraphListener implements GraphListener {
@@ -65,11 +66,13 @@ public class CloudGraphListener implements GraphListener {
         boolean isStartNode = node.getClass().getName().equals("org.jenkinsci.plugins.workflow.cps.nodes.StepStartNode");
         boolean isEndNode = node.getClass().getName().equals("org.jenkinsci.plugins.workflow.cps.nodes.StepEndNode");
         boolean isPauseNode = PauseAction.isPaused(node);
-
-        if ((isStartNode || isEndNode || isPauseNode) && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-            JenkinsPipelineStatus status = new JenkinsPipelineStatus(workflowRun, cloudCause, node, listener, isStartNode, isPauseNode);
-            JSONObject statusUpdate = status.generate(false);
-            CloudPublisher.uploadJobStatus(statusUpdate);
+        JenkinsPipelineStatus status = new JenkinsPipelineStatus(workflowRun, cloudCause, node, listener, isStartNode, isPauseNode);
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        for (int instanceNum = 0; instanceNum < entries.size(); instanceNum++) {
+            if ((isStartNode || isEndNode || isPauseNode) && entries.get(instanceNum).isConfigured()) {
+                JSONObject statusUpdate = status.generate(false, instanceNum);
+                CloudPublisher.uploadJobStatus(statusUpdate, instanceNum);
+            }
         }
     }
 

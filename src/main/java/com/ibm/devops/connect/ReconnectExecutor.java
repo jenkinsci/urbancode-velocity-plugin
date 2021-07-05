@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.lang.Runnable;
+import java.util.List;
 
 public class ReconnectExecutor {
     public static final Logger log = LoggerFactory.getLogger(ReconnectExecutor.class);
@@ -39,13 +40,17 @@ public class ReconnectExecutor {
         @Override
         public void run()
         {
-           if (!cloudSocketInstance.isAMQPConnected() && Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-                try {
-                    cloudSocketInstance.connectToAMQP();
-                } catch (Exception e) {
-                    log.error("Unable to Reconnect to UCV AMQP", e);
+            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+            for (int instanceNum = 0; instanceNum < entries.size(); instanceNum++) {
+            if (!cloudSocketInstance.isAMQPConnected(instanceNum) && entries.get(instanceNum).isConfigured()) {
+                    try {
+                        cloudSocketInstance.connectToAMQP(instanceNum);
+                    } catch (Exception e) {
+                        log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Unable to Reconnect to UCV AMQP", e);
+                    }
                 }
             }
         }
     }
+
 }

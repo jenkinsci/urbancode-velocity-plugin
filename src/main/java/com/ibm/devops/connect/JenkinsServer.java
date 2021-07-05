@@ -59,14 +59,15 @@ public class JenkinsServer {
     private static String FOLDER_SPEC= "<?xml version=\"1.0\" encoding=\"UTF-8\"?><com.cloudbees.hudson.plugins.folder.Folder plugin=\"cloudbees-folder\"><description>Folder created by the IBM Devops plugin</description></com.cloudbees.hudson.plugins.folder.Folder>";
     private static String jobSrc= "<?xml version='1.0' encoding='UTF-8'?>\r\n<flow-definition plugin=\"workflow-job@2.10\">\r\n    <description></description>\r\n    <keepDependencies>false</keepDependencies>\r\n    <properties>\r\n        <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>\r\n            <triggers>\r\n                <hudson.triggers.SCMTrigger>\r\n                    <spec>* * * * *</spec>\r\n                    <ignorePostCommitHooks>false</ignorePostCommitHooks>\r\n                </hudson.triggers.SCMTrigger>\r\n            </triggers>\r\n        </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>\r\n    </properties>\r\n    <definition class=\"org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition\" plugin=\"workflow-cps@2.30\">\r\n        <scm class=\"hudson.plugins.git.GitSCM\" plugin=\"git@3.3.0\">\r\n            <configVersion>2</configVersion>\r\n            <userRemoteConfigs>\r\n                <hudson.plugins.git.UserRemoteConfig>\r\n                    <url>https://github.com/ejodet/discovery-nodejs</url>\r\n                </hudson.plugins.git.UserRemoteConfig>\r\n            </userRemoteConfigs>\r\n            <branches>\r\n                <hudson.plugins.git.BranchSpec>\r\n                    <name>*/mastertoto</name>\r\n                </hudson.plugins.git.BranchSpec>\r\n            </branches>\r\n            <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>\r\n            <submoduleCfg class=\"list\"/>\r\n            <extensions/>\r\n        </scm>\r\n        <scriptPath>Jenkinsfile</scriptPath>\r\n        <lightweight>true</lightweight>\r\n    </definition>\r\n    <triggers/>\r\n</flow-definition>";
 
-    public static Collection<String> getJobNames() {
-    	log.debug(logPrefix + "getJobNames - get the list of job names");
+    public static Collection<String> getJobNames(int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#getJobNames - get the list of job names");
     	Collection<String> allJobNames= Jenkins.getInstance().getJobNames();
-    	log.debug(logPrefix + "getJobNames - retrieved " + allJobNames.size() + " JobNames");
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#getJobNames - retrieved " + allJobNames.size() + " JobNames");
     	for (Iterator iterator = allJobNames.iterator(); iterator.hasNext();) {
 
     		String aJobName = (String) iterator.next();
-    		log.debug(logPrefix + "job: " + aJobName);
+    		log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#getJobNames - job: " + aJobName);
     	}
     	return Jenkins.getInstance().getJobNames();
     }
@@ -107,41 +108,42 @@ public class JenkinsServer {
     	return null;
     }
 
-    public static void createJob(JSONObject newJob) {
-    	log.debug(logPrefix + "createJob - Creating a new job.");
-    	if(validCreationRequest(newJob)) {
+    public static void createJob(JSONObject newJob, int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createJob - Creating a new job.");
+    	if(validCreationRequest(newJob, instanceNum)) {
     		// get current security settings
     		SecurityRealm securityRealm= Jenkins.getInstance().getSecurityRealm();
     		AuthorizationStrategy authorizationStrategy= Jenkins.getInstance().getAuthorizationStrategy();
 
         	// temporarily disable security as we are not allowed to create jobs as anonymous
-        	disableSecurity();
+        	disableSecurity(instanceNum);
     		try {
     			// create creds if necessary
-    			createCredentials(newJob) ;
+    			createCredentials(newJob, instanceNum) ;
     			JSONObject props = newJob.getJSONObject("props");
     			// create folder
     			String folderName= props.get("folderName").toString();
-    			createFolder(folderName);
+    			createFolder(folderName, instanceNum);
     			// verify folder was created
     			Folder targetFolder= getFolder(folderName);
     			if (targetFolder == null) {
-    				log.debug(logPrefix + "createJob - target folder not retrieved. Exiting creation process");
+    				log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createJob - target folder not retrieved. Exiting creation process");
     			} else {
-    				log.debug(logPrefix + "createJob - target folder retrieved !!!!!");
+    				log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createJob - target folder retrieved !!!!!");
         			// create job in target folder
         			String jobSrc= props.get("source").toString();
         			String jobName= props.get("jobName").toString();
-        			Collection<String> existingJobs= getJobNames();
+        			Collection<String> existingJobs= getJobNames(instanceNum);
         			if (existingJobs.contains(jobName)) {
         				// do not create
-        				log.debug(logPrefix + "Job " + jobName + " already exists.");
+        				log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createJob - Job " + jobName + " already exists.");
         			} else {
-        				createJobInFolder(targetFolder, jobName, jobSrc);
+        				createJobInFolder(targetFolder, jobName, jobSrc, instanceNum);
         			}
     			}
     		} catch (Exception e) {
-    			log.error(logPrefix + "An unexpected error occurred while creating job.");
+    			log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createJob - An unexpected error occurred while creating job.");
                 e.printStackTrace();
             } finally {
             	// be sure to re-enable security
@@ -151,66 +153,71 @@ public class JenkinsServer {
         }
     }
 
-    private static void createCredentials(JSONObject newJob) {
+    private static void createCredentials(JSONObject newJob, int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
     	if(newJob.has("props")) {
             JSONObject props = newJob.getJSONObject("props");
             if (props.has("userName") && props.has("password")) { // not all jobs require creds creation
         		try {
-                	log.debug(logPrefix + "createCredentials - creating " + BLX_CREDS + " credentials.");
+                	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createCredentials - creating " + BLX_CREDS + " credentials.");
         			Credentials creds = (Credentials) new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, BLX_CREDS, BLX_CREDS_DESC, props.get("userName").toString(), props.get("password").toString());
         			SystemCredentialsProvider.getInstance().getCredentials().add(creds);
         	        SystemCredentialsProvider.getInstance().save();
-        			log.debug(logPrefix + "createCredentials " + BLX_CREDS + " successfully created.");
+        			log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createCredentials " + BLX_CREDS + " successfully created.");
         		} catch (Exception e) {
-        			log.error(logPrefix + "createCredentials - unable to  create " + BLX_CREDS + " credentials.");
+        			log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createCredentials - unable to  create " + BLX_CREDS + " credentials.");
         			e.printStackTrace();
         		}
             } else {
-            	log.debug(logPrefix + "createCredentials - credentials creation not required.");
+            	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createCredentials - credentials creation not required.");
             }
         }
     }
 
-    private static boolean validCreationRequest(JSONObject newJob) {
-    	log.debug(logPrefix + "validCreationRequest - Validating creation payload.");
+    private static boolean validCreationRequest(JSONObject newJob, int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#validCreationRequest - Validating creation payload.");
     	boolean valid= false;
     	if(newJob.has("props")) {
             JSONObject props = newJob.getJSONObject("props");
             if (props.has("folderName") && props.has("jobName") && props.has("source")) {
-            	log.debug(logPrefix + "validCreationRequest - Payload is valid.");
+            	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#validCreationRequest - Payload is valid.");
             	valid= true;
             } else {
-            	log.error(logPrefix + "validCreationRequest - Payload is not valid!");
+            	log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#validCreationRequest - Payload is not valid!");
             }
         }
     	return valid;
     }
 
-    private static void createFolder(String folderName) {
-    	log.debug(logPrefix + "createFolder - Creating folder " + folderName);
+    private static void createFolder(String folderName, int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createFolder - Creating folder " + folderName);
     	try {
     		Jenkins.getInstance().createProjectFromXML(folderName, new ByteArrayInputStream(FOLDER_SPEC.getBytes(Charset.forName("UTF-8"))));
-    		log.debug(logPrefix + folderName + " was created successfully!");
+    		log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createFolder - " + folderName + " was created successfully!");
     	} catch (Exception e) {
     		// folder might be existing
-    		log.debug(logPrefix + folderName + " was not created.");
+    		log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createFolder - " + folderName + " was not created.");
             // e.printStackTrace();
         }
     }
 
-    private static void createJobInFolder(Folder targetFolder, String jobName, String source) {
-    	log.debug(logPrefix + "createItem - Creating job " + jobName);
+    private static void createJobInFolder(Folder targetFolder, String jobName, String source, int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createItem - Creating job " + jobName);
     	try {
     		targetFolder.createProjectFromXML(jobName, new ByteArrayInputStream(source.getBytes(Charset.forName("UTF-8"))));
-    		log.debug(logPrefix + jobName + " was created successfully!");
+    		log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createItem - " + jobName + " was created successfully!");
     	} catch (Exception e) {
-    		log.error(logPrefix + jobName + " was not created.");
+    		log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#createItem - " +  jobName + " was not created.");
             e.printStackTrace();
         }
     }
 
-    private static void disableSecurity() {
-    	log.debug(logPrefix + "disableSecurity()");
+    private static void disableSecurity(int instanceNum) {
+		List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    	log.debug("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] JenkinsServer#disableSecurity()");
     	Jenkins.getInstance().disableSecurity();
     }
 

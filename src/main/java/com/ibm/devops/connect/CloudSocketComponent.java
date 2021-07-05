@@ -26,6 +26,7 @@ import com.rabbitmq.client.*;
 
 import java.io.IOException;
 import com.ibm.devops.connect.Endpoints.EndpointManager;
+import java.util.List;
 
 
 import java.security.MessageDigest;
@@ -44,12 +45,11 @@ import org.apache.http.client.utils.URIBuilder;
 public class CloudSocketComponent {
 
     public static final Logger log = LoggerFactory.getLogger(CloudSocketComponent.class);
-    private String logPrefix= "[UrbanCode Velocity] CloudSocketComponent#";
 
     final private IWorkListener workListener;
     final private String cloudUrl;
 
-    private static Connection conn;
+    private static Connection conn[] = new Connection[5];
 
     private static boolean queueIsAvailable = false;
     private static boolean otherIntegrationExists = false;
@@ -63,25 +63,11 @@ public class CloudSocketComponent {
         this.cloudUrl = cloudUrl;
     }
 
-    public boolean isRegistered() {
-        return StringUtils.isNotBlank(getSyncToken());
-    }
-
-    public String getSyncId() {
-        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncId();
-    }
-
-    public String getSyncToken() {
-        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
-    }
-
-    public void connectToCloudServices() throws Exception {
-        if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-            logPrefix= logPrefix + "connectToCloudServices ";
-
-            connectToAMQP();
-
-            log.info(logPrefix + "Assembling list of Jenkins Jobs...");
+    public void connectToCloudServices(int instanceNum) throws Exception {
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        if (entries.get(instanceNum).isConfigured()) {
+            connectToAMQP(instanceNum);
+            log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudSocketComponent#connectToCloudServices " + "Assembling list of Jenkins Jobs...");
 
             BuildJobsList buildJobList = new BuildJobsList();
             BuildJobListParamObj paramObj = buildJobList.new BuildJobListParamObj();
@@ -89,11 +75,11 @@ public class CloudSocketComponent {
         }
     }
 
-    public static boolean isAMQPConnected() {
-        if (conn == null || queueIsAvailable == false) {
+    public static boolean isAMQPConnected(int instanceNum) {
+        if (conn[instanceNum] == null || queueIsAvailable == false) {
             return false;
         }
-        return conn.isOpen();
+        return conn[instanceNum].isOpen();
     }
     
     private static byte[] toByte(String hexString) {
@@ -120,12 +106,13 @@ public class CloudSocketComponent {
         return Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));   
     }
 
-    public void connectToAMQP() throws Exception {
-        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
+    public void connectToAMQP(int instanceNum) throws Exception {
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        if (!entries.get(instanceNum).isConfigured()) {
             return;
         }
 
-        String syncId = getSyncId();
+        String syncId = entries.get(instanceNum).getSyncId();
 
         ConnectionFactory factory = new ConnectionFactory();
         factory.setAutomaticRecoveryEnabled(false);
@@ -136,8 +123,8 @@ public class CloudSocketComponent {
         factory.setUsername("jenkins");
         factory.setPassword("jenkins");
 
-        String host = em.getVelocityHostname();
-        String rabbitHost = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getRabbitMQHost();
+        String host = em.getVelocityHostname(instanceNum);
+        String rabbitHost = entries.get(instanceNum).getRabbitMQHost();
         if (rabbitHost != null && !rabbitHost.equals("")) {
             try {
                 if (rabbitHost.endsWith("/")) {
@@ -146,19 +133,19 @@ public class CloudSocketComponent {
                 URL urlObj = new URL(rabbitHost);
                 host = urlObj.getHost();
             } catch (MalformedURLException e) {
-                log.warn("Provided Rabbit MQ Host is not a valid hostname. Using default : " + host, e);
+                log.warn("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Provided Rabbit MQ Host is not a valid hostname. Using default : " + host, e);
             }
         }
         factory.setHost(host);
 
         int port = 5672;
-        String rabbitPort = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getRabbitMQPort();
+        String rabbitPort = entries.get(instanceNum).getRabbitMQPort();
 
         if (rabbitPort != null && !rabbitPort.equals("")) {
             try {
                 port = Integer.parseInt(rabbitPort);
             } catch (NumberFormatException nfe) {
-                log.warn("Provided Rabbit MQ port is not an integer.  Using default 5672");
+                log.warn("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Provided Rabbit MQ port is not an integer.  Using default 5672");
             }
         }
         factory.setPort(port);
@@ -166,15 +153,15 @@ public class CloudSocketComponent {
         // Synchronized to protect manipulation of static variable
         synchronized (this) {
 
-            if(this.conn != null && this.conn.isOpen()) {
-                this.conn.abort();
+            if(this.conn[instanceNum] != null && this.conn[instanceNum].isOpen()) {
+                this.conn[instanceNum].abort();
             }
+            
+            conn[instanceNum] = factory.newConnection();
 
-            conn = factory.newConnection();
+            Channel channel = conn[instanceNum].createChannel();
 
-            Channel channel = conn.createChannel();
-
-            log.info("Connecting to RabbitMQ");
+            log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Connecting to RabbitMQ");
 
             String EXCHANGE_NAME = "jenkins";
             String queueName = "jenkins.client." + syncId;
@@ -185,15 +172,15 @@ public class CloudSocketComponent {
                                             AMQP.BasicProperties properties, byte[] body) throws IOException {
 
                     if (envelope.getRoutingKey().contains(".heartbeat")) {
-                        String syncId = getSyncId();
-                        String syncToken = getSyncToken();
+                        String syncId = entries.get(instanceNum).getSyncId();
+                        String syncToken = entries.get(instanceNum).getSyncToken();
 
-                        String url = removeTrailingSlash(Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getBaseUrl());
+                        String url = removeTrailingSlash(entries.get(instanceNum).getBaseUrl());
                         boolean connected = CloudPublisher.testConnection(syncId, syncToken, url);
                     } else {
                         String message = new String(body, "UTF-8");
                         String payload = null;
-                        String syncToken = getSyncToken();
+                        String syncToken = entries.get(instanceNum).getSyncToken();
                         try {
                             payload = decrypt(syncToken, message.toString());
                         } catch (Exception e) {
@@ -267,31 +254,32 @@ public class CloudSocketComponent {
                                 log.info(" =========================== Found duplicate Jenkins Job and stopped it =========================== ");
                             }
                             else{
-                                System.out.println(" [x] Received '" + message + "'");
+                                System.out.println("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] [x] Received '" + message + "'");
                                 CloudWorkListener2 cloudWorkListener = new CloudWorkListener2();
-                                cloudWorkListener.call("startJob", message);   
+                                cloudWorkListener.call("startJob", message, instanceNum);   
                             }    
                         }
                     }
                 }
             };
 
-            if (checkQueueAvailability(channel, queueName)) {
+            if (checkQueueAvailability(channel, queueName, instanceNum)) {
                 channel.basicConsume(queueName, true, consumer);
             }else{
-                log.info("Queue is not yet available, will attempt to reconect shortly...");
+                log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Queue is not yet available, will attempt to reconect shortly...");
                 queueIsAvailable = false;
             }
         }
     }
 
-    public static boolean checkQueueAvailability(Channel channel, String queueName) throws IOException {
+    public static boolean checkQueueAvailability(Channel channel, String queueName, int instanceNum) throws IOException {
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
         try {
           channel.queueDeclarePassive(queueName);
           queueIsAvailable = true;
           return true;
         } catch (IOException e) {
-            log.error("Checking Queue availability threw exception: ", e);
+            log.error("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] Checking Queue availability threw exception: ", e);
         }
         return false;
       }

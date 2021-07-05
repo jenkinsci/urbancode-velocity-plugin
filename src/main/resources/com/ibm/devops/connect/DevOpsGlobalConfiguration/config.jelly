@@ -27,36 +27,15 @@
       so it should be straightforward to find them.
     -->
     <f:section title="UrbanCode Velocity">
-        <f:entry title="Integration ID" field="syncId">
-            <f:textbox />
-        </f:entry>
-        <f:entry title="Integration Token" field="syncToken">
-            <f:password />
-        </f:entry>
-        <f:entry title="Velocity Base URL" field="baseUrl">
-            <f:textbox />
-        </f:entry>
-
         <f:entry title="Jenkins credentials" field="credentialsId">
             <c:select/>
         </f:entry>
-        <f:entry title="${%User Access Key}" field="apiToken">
-            <f:password />
-        </f:entry>
-        <f:advanced>
-            <f:entry title="${%Rabbit MQ Port}" field="rabbitMQPort">
-                <f:textbox />
-            </f:entry>
-            <f:entry title="${%Rabbit MQ Host}" field="rabbitMQHost">
-                <f:textbox />
-            </f:entry>
-        </f:advanced>
+        <f:repeatableProperty field="entries" add="Add UCV Instance">
         <f:entry title="">
-            <div style="text-align: right">
-            <f:validateButton
-                title="${%Test Connection}" progress="${%Testing...}"
-                method="testConnection" with="syncId,syncToken,baseUrl"/>
+            <div align="right">
+                <f:repeatableDeleteButton />
             </div>
         </f:entry>
+        </f:repeatableProperty>
     </f:section>
 </j:jelly>

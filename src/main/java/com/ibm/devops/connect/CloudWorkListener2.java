@@ -78,7 +78,6 @@ import com.ibm.devops.connect.SecuredActions.AbstractSecuredAction;
  */
 public class CloudWorkListener2 {
 	public static final Logger log = LoggerFactory.getLogger(CloudWorkListener2.class);
-    private String logPrefix= "[UrbanCode Velocity] CloudWorkListener2#";
 
     public CloudWorkListener2() {
 
@@ -119,10 +118,11 @@ public class CloudWorkListener2 {
     }
 
     public void callSecured(ConnectSocket socket, String event, String securityError, Object... args) {
-        log.info(logPrefix + " Received event from Connect Socket");
-
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
         String payload = args[0].toString();
-        String token = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getSyncToken();
+        int instanceNum = Integer.parseInt(args[1].toString());
+        log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - Received event from Connect Socket");
+        String token = entries.get(instanceNum).getSyncToken();
 
         try {
             payload = decrypt(token, payload);
@@ -138,9 +138,9 @@ public class CloudWorkListener2 {
             JSONObject incomingJob = incomingJobs.getJSONObject(i);
             // sample job creation request from a toolchain
             if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
-                log.info(logPrefix + "Job creation request received.");
+                log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - Job creation request received.");
                 // delegating job creation to the Jenkins server
-                JenkinsServer.createJob(incomingJob);
+                JenkinsServer.createJob(incomingJob, instanceNum);
             }
 
             if (incomingJob.has("fullName")) {
@@ -151,18 +151,18 @@ public class CloudWorkListener2 {
                 // Get item by name
                 Item item = myJenkins.getItem(fullName);
 
-                log.info("Item Found (1): " + item);
+                log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - Item Found (1): " + item);
 
                 // If item is not retrieved, get by full name
                 if(item == null) {
                     item = myJenkins.getItemByFullName(fullName);
-                    log.info("Item Found (2): " + item);
+                    log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - Item Found (2): " + item);
                 }
 
                 // If item is not retrieved, get by full name with escaped characters
                 if(item == null) {
                     item = myJenkins.getItemByFullName(escapeItemName(fullName));
-                    log.info("Item Found (3): " + item);
+                    log.info("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - Item Found (3): " + item);
                 }
 
                 List<ParameterValue> parametersList = generateParamList(incomingJob, getParameterTypeMap(item));
@@ -202,16 +202,18 @@ public class CloudWorkListener2 {
                     } else {
                         errorMessage = "No Item Found";
                     }
-                    log.warn(errorMessage);
+                    log.warn("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - " + errorMessage);
                 } else {
                     errorMessage = "Unhandled job type found: " + item.getClass();
-                    log.warn(errorMessage);
+                    log.warn("[UrbanCode Velocity "+ entries.get(instanceNum).getBaseUrl() + "] CloudWorkListener2#callSecured - " + errorMessage);
                 }
 
                 if( errorMessage != null ) {
                     JenkinsJobStatus erroredJobStatus = new JenkinsJobStatus(null, cloudCause, null, null, true, true);
-                    JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage);
-                    CloudPublisher.uploadJobStatus(statusUpdate);
+                    for (int instanceNum2 = 0; instanceNum2 < entries.size(); instanceNum++) {
+                        JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage, instanceNum);
+                        CloudPublisher.uploadJobStatus(statusUpdate, instanceNum2);
+                    }
                 }
 
             }

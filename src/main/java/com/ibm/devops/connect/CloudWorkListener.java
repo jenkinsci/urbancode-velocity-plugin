@@ -96,6 +96,7 @@ public class CloudWorkListener implements IWorkListener {
         log.info(logPrefix + " Received event from Connect Socket");
 
         JSONArray incomingJobs = JSONArray.fromObject(args[0].toString());
+        int instanceNum = Integer.parseInt(args[1].toString());
 
         for(int i=0; i < incomingJobs.size(); i++) {
 
@@ -106,7 +107,7 @@ public class CloudWorkListener implements IWorkListener {
             if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
             	log.info(logPrefix + "Job creation request received.");
             	// delegating job creation to the Jenkins server
-            	JenkinsServer.createJob(incomingJob);
+            	JenkinsServer.createJob(incomingJob, instanceNum);
         	}
 
 
@@ -169,9 +170,11 @@ public class CloudWorkListener implements IWorkListener {
 
                 if( errorMessage != null ) {
                     JenkinsJobStatus erroredJobStatus = new JenkinsJobStatus(null, cloudCause, null, null, true, true);
-                    JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage);
-                    CloudPublisher.uploadJobStatus(statusUpdate);
-
+                    List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+                    for (int instanceNum2 = 0; instanceNum2 < entries.size(); instanceNum++) {
+                        JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage, instanceNum);
+                        CloudPublisher.uploadJobStatus(statusUpdate, instanceNum2);
+                    }
                     workStatus = WorkStatus.failed;
                 }
 

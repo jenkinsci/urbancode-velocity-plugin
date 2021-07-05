@@ -39,6 +39,8 @@ import org.apache.http.entity.ContentType;
 
 import com.ibm.devops.connect.CloudPublisher;
 import com.ibm.devops.connect.DevOpsGlobalConfiguration;
+import com.ibm.devops.connect.Entry;
+import java.util.List;
 
 public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
 
@@ -56,21 +58,21 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
     throws AbortException, InterruptedException, IOException {
-        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-            listener.getLogger().println("Could not upload junit tests to Velocity as there is no configuration specified.");
-            return;
-        }
-
         Object fatalFailure = this.properties.get("fatal");
         String buildUrl = Jenkins.getInstance().getRootUrl() + build.getUrl();
-        String userAccessKey = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getApiToken();
-
-        boolean success = workspace.act(new FileUploader(this.properties, listener, buildUrl, CloudPublisher.getQualityDataUrl(), userAccessKey));
-        if (!success) {
-            if (fatalFailure != null && fatalFailure.toString().equals("true")) {
-                build.setResult(Result.FAILURE);
-            } else {
-                build.setResult(Result.UNSTABLE);
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        for (int instanceNum = 0; instanceNum < entries.size(); instanceNum++) {
+            if (!entries.get(instanceNum).isConfigured()) {
+                listener.getLogger().println("Could not upload junit tests to Velocity as there is no configuration specified.");
+                return;
+            }
+            boolean success = workspace.act(new FileUploader(this.properties, listener, buildUrl, CloudPublisher.getQualityDataUrl(instanceNum),  entries.get(instanceNum).getApiToken(), instanceNum));
+            if (!success) {
+                if (fatalFailure != null && fatalFailure.toString().equals("true")) {
+                    build.setResult(Result.FAILURE);
+                } else {
+                    build.setResult(Result.UNSTABLE);
+                }
             }
         }
     }
@@ -111,13 +113,15 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
         private String buildUrl;
         private String postUrl;
         private String userAccessKey;
+        private int instanceNum;
 
-        public FileUploader(Map<String, String> properties, TaskListener listener, String buildUrl, String postUrl, String userAccessKey) {
+        public FileUploader(Map<String, String> properties, TaskListener listener, String buildUrl, String postUrl, String userAccessKey, int instanceNum) {
             this.properties = properties;
             this.listener = listener;
             this.buildUrl = buildUrl;
             this.postUrl = postUrl;
             this.userAccessKey = userAccessKey;
+            this.instanceNum = instanceNum;
         }
 
         @Override public Boolean invoke(File f, VirtualChannel channel) {
@@ -177,10 +181,11 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
                 .build();
 
             boolean success = false;
+            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
             try {
-                success = CloudPublisher.uploadQualityData(entity, postUrl, userAccessKey);
+                success = CloudPublisher.uploadQualityData(entity, postUrl, userAccessKey, instanceNum);
             } catch (Exception ex) {
-                listener.error("Error uploading quality data: " + ex.getClass() + " - " + ex.getMessage());
+                listener.error("Error uploading quality data (" + entries.get(instanceNum).getBaseUrl() + "): " + ex.getClass() + " - " + ex.getMessage());
             }
             return success;
         }

@@ -37,6 +37,12 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import com.ibm.devops.connect.CloudPublisher;
 import com.ibm.devops.connect.DevOpsGlobalConfiguration;
+import com.ibm.devops.connect.Entry;
+import java.util.List;
+import org.apache.commons.lang.StringUtils;
+import hudson.util.ListBoxModel;
+import org.kohsuke.stapler.QueryParameter;
+import java.util.ArrayList;
 
 public class UploadASoCTestResult extends Notifier {
 
@@ -49,6 +55,7 @@ public class UploadASoCTestResult extends Notifier {
     private String metricDefinition;
     private String recordName;
     private String commitId;
+    private String instanceBaseUrl;
 
     @DataBoundConstructor
     public UploadASoCTestResult(
@@ -60,7 +67,8 @@ public class UploadASoCTestResult extends Notifier {
         String buildUrl,
         String metricDefinition,
         String recordName,
-        String commitId
+        String commitId,
+        String instanceBaseUrl
     ) {
         this.tenantId = tenantId;
         this.environment = environment;
@@ -71,6 +79,7 @@ public class UploadASoCTestResult extends Notifier {
         this.metricDefinition = metricDefinition;
         this.recordName = recordName;
         this.commitId = commitId;
+        this.instanceBaseUrl = instanceBaseUrl;
     }
 
     public String getTenantId() { return tenantId; }
@@ -82,6 +91,7 @@ public class UploadASoCTestResult extends Notifier {
     public String getMetricDefinition() { return metricDefinition; }
     public String getRecordName() { return recordName; }
     public String getCommitId() { return commitId; }
+    public String getInstanceBaseUrl() { return this.instanceBaseUrl; }
     
     @Override
     public BuildStepMonitor getRequiredMonitorService() {
@@ -93,12 +103,6 @@ public class UploadASoCTestResult extends Notifier {
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
     throws AbortException, InterruptedException, IOException {
-
-        if (!Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).isConfigured()) {
-            listener.getLogger().println("Could not upload ASoC results to Velocity as there is no configuration specified.");
-            return false;
-        }
-
         EnvVars envVars = build.getEnvironment(listener);
         // Resolving all passed ${VARIABLES}
         String tenantIdValue = envVars.expand(this.tenantId);
@@ -109,6 +113,30 @@ public class UploadASoCTestResult extends Notifier {
         String buildUrlValue = envVars.expand(this.buildUrl);
         String metricDefinitionValue = envVars.expand(this.metricDefinition);
         String recordNameValue = envVars.expand(this.recordName);
+        String instanceBaseUrl = envVars.expand(this.instanceBaseUrl == null ? "" : this.instanceBaseUrl.toString());
+
+        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        int instanceNum = 0;
+        if(instanceBaseUrl.equals("Upload ASoC Test Result to All UCV Instances")){
+            instanceNum = -1;
+        }else if(StringUtils.isNotEmpty(instanceBaseUrl)){
+            try {
+                int i=0;
+                for (Entry entry : entries) {
+                    if(removeTrailingSlash(instanceBaseUrl).equals(removeTrailingSlash(entry.getBaseUrl()))){
+                        instanceNum = i;
+                        break;
+                    }
+                    i=i+1;
+                }
+            } catch (NumberFormatException nfe) {
+                listener.getLogger().println("Provided UCV Instance BaseUrl : ("+instanceBaseUrl+") for Upload ASoC Test Result is not vaild.");
+                return false;
+            }
+        }else{
+            instanceNum = -1;
+            listener.getLogger().println("UCV Instance BaseUrl is not provided for Upload ASoC Test Result.  Using default: Upload ASoC Test Result to All UCV Instances");
+        }
 
         Job parentJob = (Job)build.getParent();
         Run thisBuild = parentJob.getBuildByNumber(build.getNumber());
@@ -207,13 +235,36 @@ public class UploadASoCTestResult extends Notifier {
                 payload.put("build", buildObj);
 
                 listener.getLogger().println("Payload Doc To Upload: " + payload.toString());
-                listener.getLogger().println("Uploading Payload Doc");
-                try {
-                    CloudPublisher.uploadQualityDataRaw(payload.toString());
-                    listener.getLogger().println("Upload Complete");
-                } catch (Exception ex) {
-                    listener.error("Error uploading ASoC data: " + ex.getClass() + " - " + ex.getMessage());
-                    build.setResult(Result.FAILURE);
+                if(instanceNum == -1){
+                    int i = 0;
+                    for (Entry entry : entries) {
+                        listener.getLogger().println("Uploading Payload Doc (" + entry.getBaseUrl() + ").");
+                        try {
+                            if (!entry.isConfigured()) {
+                                listener.getLogger().println("Could not upload builds to Velocity as there is no configuration specified.");
+                                return false;
+                            }
+                            CloudPublisher.uploadQualityDataRaw(i, payload.toString());
+                            listener.getLogger().println("Upload Complete (" + entry.getBaseUrl() + ").");
+                        } catch (Exception ex) {
+                            listener.error("Error uploading ASoC data (" + entry.getBaseUrl() + "): " + ex.getClass() + " - " + ex.getMessage());
+                            build.setResult(Result.FAILURE);
+                        }
+                        i = i + 1;
+                    }
+                }else{
+                    listener.getLogger().println("Uploading Payload Doc (" + entries.get(instanceNum).getBaseUrl() + ").");
+                    try {
+                        if (!entries.get(instanceNum).isConfigured()) {
+                            listener.getLogger().println("Could not upload builds to Velocity as there is no configuration specified.");
+                            return false;
+                        }
+                        CloudPublisher.uploadQualityDataRaw(instanceNum, payload.toString());
+                        listener.getLogger().println("Upload Complete (" + entries.get(instanceNum).getBaseUrl() + ").");
+                    } catch (Exception ex) {
+                        listener.error("Error uploading ASoC data (" + entries.get(instanceNum).getBaseUrl() + "): " + ex.getClass() + " - " + ex.getMessage());
+                        build.setResult(Result.FAILURE);
+                    }
                 }
 
             } catch (NoSuchMethodException e1) {
@@ -256,5 +307,26 @@ public class UploadASoCTestResult extends Notifier {
             // This is not meant for public use in its current form.
             return false;
         }
+
+        @SuppressWarnings("unused")
+        public ListBoxModel doFillInstanceBaseUrlItems(@QueryParameter String currentInstanceBaseUrl) {
+            // Create ListBoxModel from all projects for this AWS Device Farm account.
+            List<ListBoxModel.Option> baseUrls = new ArrayList<ListBoxModel.Option>();
+            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+            String all = "Upload ASoC Test Result to All UCV Instances";
+            baseUrls.add(new ListBoxModel.Option(all, all, all.equals(currentInstanceBaseUrl)));
+            for (Entry entry : entries) {
+                // We don't ignore case because these *should* be unique.
+                baseUrls.add(new ListBoxModel.Option(entry.getBaseUrl(), entry.getBaseUrl(), entry.getBaseUrl().equals(currentInstanceBaseUrl)));
+            }
+            return new ListBoxModel(baseUrls);
+        }
+    }
+
+    private String removeTrailingSlash(String url) {
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 }

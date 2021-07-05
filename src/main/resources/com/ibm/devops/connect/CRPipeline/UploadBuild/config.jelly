@@ -1,5 +1,8 @@
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="Velocity BaseUrl" field="instanceBaseUrl">
+        <f:select/>
+    </f:entry>
     <f:entry title="Tenant Id" field="tenantId">
         <f:textbox />
     </f:entry>
