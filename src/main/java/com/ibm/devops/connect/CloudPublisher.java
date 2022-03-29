@@ -172,9 +172,9 @@ public class CloudPublisher  {
         JSONArray payload = new JSONArray();
         payload.add(jobJson);
 
-        System.out.println("SENDING JOBS TO: ");
-        System.out.println(url);
-        System.out.println(jobJson.toString());
+        log.info("SENDING JOBS TO: ");
+        log.info(url);
+        log.info(jobJson.toString());
 
         CloudPublisher.postToSyncAPI(url, payload.toString());
     }
@@ -386,7 +386,7 @@ public class CloudPublisher  {
                     if (response2.getStatusLine().toString().contains("200")) {
                         log.info(localLogPrefix + "Upload Job Information successfully");
                     } else {
-                        log.error(localLogPrefix + "Error: Upload Job has bad status code, response status " + response2.getStatusLine());
+                        log.error(localLogPrefix + "Error: Upload Job has bad status code,(if 401 check configuration properties) response status " + response2.getStatusLine());
                     }
                     try {
                         EntityUtils.toString(response2.getEntity());
@@ -398,10 +398,10 @@ public class CloudPublisher  {
                 }
 
                 public void failed(final Exception ex) {
-                    log.error(localLogPrefix + "Error: Failed to upload Job, response status " + ex.getMessage());
+                    log.error(localLogPrefix + "Error: Failed to upload Job,(check connection between jenkins and UCV) response status " + ex.getMessage());
                     ex.printStackTrace();
                     if (ex instanceof IllegalStateException) {
-                        log.error(localLogPrefix + "Please check if you have the access to the configured tenant.");
+                        log.error(localLogPrefix + "Please check if you have the access to the configured tenant,also check connection between jenkins and UCV");
                     }
                 }
 
