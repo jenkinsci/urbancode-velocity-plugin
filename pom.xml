@@ -106,7 +106,7 @@
   <scm>
     <connection>scm:git:git://git@github.com/jenkinsci/urbancode-velocity-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/urbancode-velocity-plugin.git</developerConnection>
-    <tag>urbancode-velocity-2.0.0</tag>
+    <tag>urbancode-velocity-2.1.4</tag>
   </scm>
 
   <repositories>
