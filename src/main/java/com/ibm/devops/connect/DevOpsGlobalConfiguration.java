@@ -150,7 +150,7 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
             if (connected) {
                 boolean amqpConnected = CloudSocketComponent.isAMQPConnected();
 
-                String rabbitMessage = "Not connected to RabbitMQ. Unable to run Jenkins jobs from UCV.";
+                String rabbitMessage = "Not connected to RabbitMQ. Unable to run Jenkins jobs from UCV.\n WARNING:Check the port number correctly.\n If you use Kubernetes, the default port that is exposed is 31672.";
                 if(amqpConnected) {
                     rabbitMessage = "Connected to RabbitMQ successfully. Ready to run Jenkins jobs from UCV.";
                 }
