@@ -12,7 +12,9 @@
  </notice>
  */
 
-package com.ibm.devops.connect;
+//Diabling for performance testing
+
+/*package com.ibm.devops.connect;
 
 import hudson.Extension;
 import hudson.model.*;
@@ -90,4 +92,4 @@ public class CloudGraphListener implements GraphListener {
 
         return null;
     }
-}
+}*/
