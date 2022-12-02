@@ -91,7 +91,7 @@ public class CloudItemListener extends ItemListener {
                 }
             }
         }
-        log.info(logPrefix + "\n\n\Finished sending the list of Jenkins jobs...\n\n");
+        log.info(logPrefix + "\n\n\tFinished sending the list of Jenkins jobs...\n\n");
         return allJobs;
     }
 }
