@@ -60,6 +60,7 @@ public class CloudRunListener extends RunListener<Run> {
         for (Entry entry : entries) {
             if (entry.isConfigured()) {
                 JSONObject statusUpdate = status.generate(false, entry);
+                System.out.println("started2");
                 CloudPublisher.uploadJobStatus(statusUpdate, entry);
             }
         }
@@ -82,6 +83,7 @@ public class CloudRunListener extends RunListener<Run> {
         for (Entry entry : entries) {
             if (entry.isConfigured()) {
                 JSONObject statusUpdate = status.generate(true, entry);
+                System.out.println("finished2");
                 CloudPublisher.uploadJobStatus(statusUpdate, entry);
             }
         }
