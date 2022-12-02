@@ -47,7 +47,6 @@ public class CloudBuildStepListener extends BuildStepListener {
         for (Entry entry : entries) {
             if (entry.isConfigured()) {
                 JSONObject statusUpdate = status.generate(false, entry);
-                System.out.println("finished");
                 CloudPublisher.uploadJobStatus(statusUpdate, entry);
             }
         }
@@ -59,7 +58,6 @@ public class CloudBuildStepListener extends BuildStepListener {
         for (Entry entry : entries) {
             if (entry.isConfigured() && this.shouldListen(build)) {
                 JSONObject statusUpdate = status.generate(false, entry);
-                System.out.println("started");
                 CloudPublisher.uploadJobStatus(statusUpdate, entry);
             }
         }
