@@ -189,6 +189,7 @@ public class CloudPublisher {
 
     public static void uploadJobStatus(JSONObject jobStatus, Entry entry) {
         String url = CloudPublisher.getSyncApiUrl(entry) + JENKINS_JOB_STATUS_ENDPOINT_URL;
+        System.out.println("sending");
         CloudPublisher.postToSyncAPI(url, jobStatus.toString(), entry);
     }
 
