@@ -28,7 +28,7 @@
             <div style="text-align: right">
             <f:validateButton
                 title="${%Test Connection}" progress="${%Testing...}"
-                method="testConnections" with="syncId,syncToken,baseUrl"/>
+                method="testConnections" with="syncId,syncToken,baseUrl,apiToken"/>
             </div>
         </f:entry>
     </f:entry>
