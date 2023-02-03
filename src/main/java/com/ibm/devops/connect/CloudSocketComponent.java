@@ -187,13 +187,7 @@ public class CloudSocketComponent {
                         String syncToken = entry.getSyncToken();
                         String apiToken = entry.getApiToken();
                         String url = CloudPublisher.removeTrailingSlash(entry.getBaseUrl());
-                        try {
-                            String connected = CloudPublisher.testConnection(syncId, syncToken, url, apiToken);
-                        } catch (URISyntaxException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
-                        }
-                        
+                        CloudPublisher.testConnection(syncId, syncToken, url, apiToken);
                     } else {
                         String message = new String(body, "UTF-8");
                         if (entry.getCheckDuplicate() == true) {

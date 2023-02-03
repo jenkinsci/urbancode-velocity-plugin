@@ -67,6 +67,7 @@ public class CloudPublisher {
 
     private final static String JENKINS_JOB_ENDPOINT_URL = "api/v1/jenkins/jobs";
     private final static String JENKINS_JOB_STATUS_ENDPOINT_URL = "api/v1/jenkins/jobStatus";
+    private final static String JENKINS_TEST_CONNECTION_URL = "api/v1/jenkins/testConnection";
     private final static String BUILD_UPLOAD_URL = "api/v1/builds";
     private final static String DEPLOYMENT_UPLOAD_URL = "api/v1/deployments";
 
@@ -134,6 +135,11 @@ public class CloudPublisher {
     private static String getSyncApiUrl(Entry entry) {
         EndpointManager em = new EndpointManager();
         return em.getSyncApiEndpoint(entry);
+    }
+
+    private static String getSyncApiUrl(String baseUrl) {
+        EndpointManager em = new EndpointManager();
+        return em.getSyncApiEndpoint(baseUrl);
     }
 
     public static String getQualityDataUrl(Entry entry) {
@@ -491,13 +497,13 @@ public class CloudPublisher {
         return url;
     }
 
-    public static String testConnection(String syncId, String syncToken, String baseUrl, String apiToken) throws URISyntaxException {
+    public static String graphqlTestCall(String syncId, String syncToken, String baseUrl, String apiToken) throws URISyntaxException {
         CloudPublisher.ensureHttpClientInitialized();
         String resStr = "";
         String result = "";
         String baseApiUrl = CloudPublisher.removeTrailingSlash(baseUrl);
         String url = baseApiUrl + "/release-events-api/graphql/";
-        CloseableHttpResponse response = null;
+        CloseableHttpResponse graphResponse = null;
         try {
             URIBuilder builder = new URIBuilder(url);
             builder.setParameter("query", "query{integrationById(id: \"" + syncId + "\"){token,_id,userAccessKey}}");
@@ -506,63 +512,110 @@ public class CloudPublisher {
             getMethod.setHeader("Accept", "application/json");
             getMethod.setHeader("Authorization", "UserAccessKey " + apiToken);
 
-            response = httpClient.execute(getMethod);
-            log.info("response status message" + response.toString());
-            resStr = EntityUtils.toString(response.getEntity());
-            log.info("Response body = " + resStr);
+            graphResponse = httpClient.execute(getMethod);
+            resStr = EntityUtils.toString(graphResponse.getEntity());
             JSONObject jsonresStr = JSONObject.fromObject(resStr);
-            log.info("Response body object = " + jsonresStr);
-            
-            if (response.getStatusLine().toString().contains("200")) {
+
+            if (graphResponse.getStatusLine().toString().contains("200")) {
                 if (jsonresStr.has("data")) {
                     JSONObject dataObject = jsonresStr.getJSONObject("data");
                     if (dataObject.has("integrationById")) {
                         JSONObject integrationByIdObj = dataObject.getJSONObject("integrationById");
                         if (integrationByIdObj.isNullObject()) {
-                            log.info("please provide correct integrationId");
-                            result = "please provide correct integrationId";
+                            log.info("Incorrect IntegrationId Value");
+                            result = "Incorrect IntegrationId Value";
                             return result;
                         } else if (!(integrationByIdObj.getString("token").equals(syncToken))) {
-                            log.info("Please provide correct Integration Token value");
-                            result = "Please provide correct Integration Token value";
+                            log.info("Incorrect Integration Token Value");
+                            result = "Incorrect Integration Token Value";
                             return result;
                         } else {
-                            log.info("successfull connection");
                             result = "successfull connection";
                         }
                     }
                 }
             return result;
 
-            } else if(response.getStatusLine().toString().contains("401")){
-                log.error("Wrong userAccessKey, Please provide right one.");
-                return "Wrong userAccessKey, Please provide right one.";
+            } else if(graphResponse.getStatusLine().toString().contains("401")){
+                log.error("Incorrect userAccessKey");
+                return "Incorrect userAccessKey";
             } else {
-                log.error("could not able to connect to velocity");
-                return "could not able to connect to velocity";
+                log.error("Could not able to connect to Velocity for " + baseApiUrl);
+                return "Could not able to connect to Velocity";
+            }
+        } catch (IOException e) {
+            log.error("Could not connect to Velocity:" + e.getMessage());
+            return "Could not connect to Velocity:" + e.getMessage();
+        }
+    }
+
+
+    public static String testConnection(String syncId, String syncToken, String baseUrl, String apiToken) {
+        CloudPublisher.ensureHttpClientInitialized();
+        String url = getSyncApiUrl(baseUrl) + JENKINS_TEST_CONNECTION_URL;
+        String resTestStr = "";
+        CloseableHttpResponse testResponse = null;
+        String graphqlTestResponse = "";
+        try {
+            HttpGet getMethod = new HttpGet(url);
+            // postMethod = addProxyInformation(postMethod);
+            getMethod.setHeader("sync_token", syncToken);
+            getMethod.setHeader("sync_id", syncId);
+            getMethod.setHeader("instance_type", "JENKINS");
+            getMethod.setHeader("instance_id", syncId);
+            getMethod.setHeader("integration_id", syncId);
+            // Must include both _ and - headers because NGINX services don't pass _ headers
+            // by default and the original version of the Velocity services expected the _
+            // headers
+            getMethod.setHeader("sync-token", syncToken);
+            getMethod.setHeader("sync-id", syncId);
+            getMethod.setHeader("instance-type", "JENKINS");
+            getMethod.setHeader("instance-id", syncId);
+            getMethod.setHeader("integration-id", syncId);
+
+            testResponse = httpClient.execute(getMethod);
+            resTestStr = EntityUtils.toString(testResponse.getEntity());
+            JSONObject testObject = JSONObject.fromObject(resTestStr);
+
+            if (testResponse.getStatusLine().toString().contains("200")) {
+                try {
+                    graphqlTestResponse = graphqlTestCall(syncId, syncToken, baseUrl, apiToken);
+                } catch (URISyntaxException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                log.info("Successful connection to Velocity for baseUrl " + baseUrl);
+                return graphqlTestResponse;
+            } else if (testResponse.getStatusLine().toString().contains("401") && testObject.has("message") && testObject.getString("message").equals("Authentication failed.")) {
+                log.error("Incorrect Integration ID / Integration token value.");
+                return "Incorrect Integration ID / Integration token value.";
+            } else {
+                log.error("Could not authenticate to Velocity Services for :" + baseUrl);
+                log.error(testResponse.toString());
+                return "Could not able to connect to Velocity";
             }
         } catch (IllegalStateException e) {
-        log.error("From IllegalStateException");
-                log.error("Could not connect to Velocity:" + e.getMessage());
-                return "Could not connect to Velocity:" + e.getMessage();
-            } catch (UnsupportedEncodingException e) {
-                log.error("From UnsupportedEncodingException");
-                log.error("Could not connect to Velocity:" + e.getMessage());
-                return "Could not connect to Velocity:" + e.getMessage();
-            } catch (ClientProtocolException e) {
-                log.error("From ClientProtocolException");
-                log.error("Could not connect to Velocity:" + e.getMessage());
-                return "Could not connect to Velocity:" + e.getMessage();
-            } catch (IOException e) {
-                log.error("From IOException");
-                log.error("Could not connect to Velocity:" + e.getMessage());
-                return "Could not connect to Velocity from IO:" + e.getMessage();
+            log.error("Could not connect to Velocity for : " + baseUrl);
+            log.error(e.getMessage());
+            return "Could not connect to Velocity";
+        } catch (UnsupportedEncodingException e) {
+            log.error("Could not connect to Velocity for : " + baseUrl);
+            log.error(e.getMessage());
+            return "Could not connect to Velocity";
+        } catch (ClientProtocolException e) {
+            log.error("Could not connect to Velocity for : " + baseUrl);
+            log.error(e.getMessage());
+            return "Could not connect to Velocity";
+        } catch (IOException e) {
+            log.error("Could not connect to Velocity for : " + baseUrl);
+            log.error(e.getMessage());
+            return "Could not connect to Velocity";
             } finally {
-                if (response != null) {
+                if (testResponse != null) {
                     try {
-                        response.close();
+                        testResponse.close();
                     } catch (Exception e) {
-                        log.error("Could not close testconnection response");
+                        log.error("Could not close testconnection response for : " + baseUrl);
                         return "Could not close testconnection response";
                     }
                 }
