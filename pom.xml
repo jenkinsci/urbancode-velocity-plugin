@@ -15,7 +15,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ibm.devops</groupId>
   <artifactId>urbancode-velocity</artifactId>
-  <version>3.0.0</version>
+  <version>3.0.1</version>
   <packaging>hpi</packaging>
   <name>UrbanCode Velocity Plugin</name>
   <description>This plugin can run Jenkins jobs as a part of a deployment plan in UrbanCode Velocity.</description>

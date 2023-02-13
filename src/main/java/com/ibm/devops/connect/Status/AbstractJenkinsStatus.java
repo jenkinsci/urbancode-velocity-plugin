@@ -308,7 +308,12 @@ public abstract class AbstractJenkinsStatus {
                     .header("Authorization", authorizationHeader)
                     .asString();
             apiResponse = response.getBody().toString();
-            JSONArray apiResponseArray = JSONArray.fromObject("[" + apiResponse + "]");
+            JSONArray apiResponseArray = JSONArray.fromObject("[ ]");
+            try{
+            apiResponseArray = JSONArray.fromObject("[" + apiResponse + "]");
+            } catch (Exception e) {
+               log.error(" Authorization failed, Check User and User privilages ", e);
+            }
             JSONObject apiResponseObject = apiResponseArray.getJSONObject(0);
             if (apiResponseObject.has("actions")) {
                 JSONArray actionsArray = JSONArray.fromObject(apiResponseObject.getString("actions"));

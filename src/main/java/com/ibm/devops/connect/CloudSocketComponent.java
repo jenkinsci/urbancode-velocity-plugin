@@ -9,6 +9,7 @@
 package com.ibm.devops.connect;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 import jenkins.model.Jenkins;
@@ -184,8 +185,9 @@ public class CloudSocketComponent {
                     if (envelope.getRoutingKey().contains(".heartbeat")) {
                         String syncId = entry.getSyncId();
                         String syncToken = entry.getSyncToken();
+                        String apiToken = entry.getApiToken();
                         String url = CloudPublisher.removeTrailingSlash(entry.getBaseUrl());
-                        boolean connected = CloudPublisher.testConnection(syncId, syncToken, url);
+                        CloudPublisher.testConnection(syncId, syncToken, url, apiToken);
                     } else {
                         String message = new String(body, "UTF-8");
                         if (entry.getCheckDuplicate() == true) {
@@ -285,7 +287,7 @@ public class CloudSocketComponent {
             if (checkQueueAvailability(channel, queueName, entry)) {
                 channel.basicConsume(queueName, true, consumer);
             } else {
-                log.info(logPrefix + "Queue is not yet available, will attempt to reconect shortly...");
+                log.info(logPrefix + "Queue is not yet available, will attempt to reconnect shortly...");
                 queueIsAvailable = false;
             }
         }
