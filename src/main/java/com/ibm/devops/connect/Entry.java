@@ -110,7 +110,7 @@ public final class Entry implements Describable<Entry> {
                     boolean amqpConnected = ConnectComputerListener.isRabbitConnected(finalEntry);
 
                     String rabbitMessage = "Not connected to RabbitMQ. Unable to run Jenkins jobs from "
-                            + finalEntry.getBaseUrl() + "\n WARNING:Check the port number correctly.\n If you use Kubernetes, the default port that is exposed is 31672.";
+                            + finalEntry.getBaseUrl();
                     if (amqpConnected && connected.equals("successfull connection")) {
                         if (StringUtils.isNotEmpty(finalEntry.getRabbitMQHost())) {
                             rabbitMessage = "Connected to RabbitMQ ( " + finalEntry.getRabbitMQHost()
