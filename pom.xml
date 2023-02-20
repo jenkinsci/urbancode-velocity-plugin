@@ -79,7 +79,7 @@
    <distributionManagement>
     <repository>
       <id>maven.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/releases/</url>
+      <url>https://repo.jenkins-ci.org/releases/</url>
     </repository>
     <snapshotRepository>
       <id>maven.jenkins-ci.org</id>
@@ -91,7 +91,7 @@
   <licenses>
     <license>
       <name>MIT License</name>
-      <url>http://opensource.org/licenses/MIT</url>
+      <url>https://opensource.org/licenses/MIT</url>
     </license>
   </licenses>
 
@@ -124,7 +124,7 @@
     <repository>
       <id>spring-snapshots</id>
       <name>Spring Snapshots</name>
-      <url>http://repo.spring.io/snapshot</url>
+      <url>https://repo.spring.io/snapshot</url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
