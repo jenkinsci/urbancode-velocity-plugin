@@ -15,10 +15,11 @@ import java.util.concurrent.TimeUnit;
 // import org.json.JSONObject;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
-
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.ibm.cloud.urbancode.connect.client.ConnectSocket;
@@ -44,6 +45,7 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.JobProperty;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,7 @@ import java.util.HashMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.lang.InterruptedException;
+import java.nio.charset.StandardCharsets;
 
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 
@@ -62,6 +65,9 @@ import com.ibm.devops.connect.SecuredActions.TriggerJob.TriggerJobParamObj;
 import com.ibm.devops.connect.SecuredActions.TriggerJob;
 
 import com.ibm.devops.connect.Status.JenkinsJobStatus;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 
 import java.security.MessageDigest;
 import javax.crypto.spec.SecretKeySpec;
@@ -118,6 +124,88 @@ public class CloudWorkListener2 {
         return new String(clearbyte, "UTF-8");
     }
 
+    private static String getEncodedString (String credentials){  
+        return Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));   
+    }
+
+    private Boolean isDuplicateJob (JSONObject incomingJob) {
+        String workId = incomingJob.getString("id");
+        String jobName = incomingJob.getString("fullName");
+        StandardUsernamePasswordCredentials credentials = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCredentialsObj();          
+        String plainCredentials = credentials.getUsername() + ":" + credentials.getPassword().getPlainText();
+        String encodedString = getEncodedString(plainCredentials);
+        String authorizationHeader = "Basic " + encodedString;
+        String rootUrl = Jenkins.getInstance().getRootUrl();
+        log.info("Root Url: " + rootUrl);
+        String path = "job/"+jobName.replaceAll("/", "/job/")+"/api/json";
+        log.info("Path: " + path);
+        String finalUrl = null;
+        String buildDetails = null;
+        try {
+            URIBuilder builder = new URIBuilder(rootUrl);
+            builder.setPath(builder.getPath()+path); 
+            builder.setParameter("fetchAllbuildDetails", "True");
+            finalUrl = builder.toString();
+            log.info("Final Url: " + finalUrl);
+        } catch (Exception e) {
+            log.warn("Caught error while building url to get details of previous builds: ", e);
+        }
+        try {
+            HttpResponse<String> response = Unirest.get(finalUrl)
+                .header("Authorization", authorizationHeader)
+                .asString();
+            buildDetails = response.getBody().toString();
+            log.info("buildDetails Response: " + buildDetails);
+        } catch (UnirestException e) {
+            log.warn("UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
+            return false;
+        }
+        if (buildDetails != null) {
+            JSONArray buildDetailsArray = JSONArray.fromObject("[" + buildDetails + "]");
+            JSONObject buildDetailsObject = buildDetailsArray.getJSONObject(0);
+            if(buildDetailsObject.has("builds")){
+                JSONArray builds = JSONArray.fromObject(buildDetailsObject.getString("builds"));
+                int buildsCount = 0;
+                if(builds.size()<50){
+                    buildsCount=builds.size();
+                }
+                else{
+                    buildsCount=50;
+                }
+                StringBuilder str = new StringBuilder();
+                for(int i=0;i<buildsCount;i++){
+                    JSONObject build = builds.getJSONObject(i);
+                    if(build.has("url")){
+                        String buildUrl = build.getString("url")+"consoleText";
+                        String finalBuildUrl = null;
+                        try {
+                            URIBuilder builder = new URIBuilder(buildUrl);
+                            finalBuildUrl = builder.toString();
+                        } catch (Exception e) {
+                            log.error("Caught error while building console log url: ", e);
+                        }
+                        try {
+                            HttpResponse<String> buildResponse = Unirest.get(finalBuildUrl)
+                            .header("Authorization", authorizationHeader)
+                            .asString();
+                            String buildConsole = buildResponse.getBody().toString();
+                            str.append(buildConsole);
+                        } catch (UnirestException e) {
+                            log.error("UnirestException: Failed to get console Logs of previous builds", e);
+                        }
+                    }
+                }
+                String allConsoleLogs = str.toString();
+                boolean isFound = allConsoleLogs.contains("Started due to a request from UrbanCode Velocity. Work Id: "+workId);
+                if(isFound==true){
+                    log.info(" =========================== Found duplicate Jenkins Job and stopped it =========================== ");
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void callSecured(ConnectSocket socket, String event, String securityError, Object... args) {
         log.info(logPrefix + " Received event from Connect Socket");
 
@@ -136,87 +224,92 @@ public class CloudWorkListener2 {
 
         for(int i=0; i < incomingJobs.size(); i++) {
             JSONObject incomingJob = incomingJobs.getJSONObject(i);
-            // sample job creation request from a toolchain
-            if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
-                log.info(logPrefix + "Job creation request received.");
-                // delegating job creation to the Jenkins server
-                JenkinsServer.createJob(incomingJob);
+            Boolean isDuplicate = false;
+            if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCheckDuplicate() == true) {
+                isDuplicate = isDuplicateJob(incomingJob);
             }
 
-            if (incomingJob.has("fullName")) {
-                String fullName = incomingJob.get("fullName").toString();
-
-                Jenkins myJenkins = Jenkins.getInstance();
-
-                // Get item by name
-                Item item = myJenkins.getItem(fullName);
-
-                log.info("Item Found (1): " + item);
-
-                // If item is not retrieved, get by full name
-                if(item == null) {
-                    item = myJenkins.getItemByFullName(fullName);
-                    log.info("Item Found (2): " + item);
+            if (isDuplicate == false) {
+                 // sample job creation request from a toolchain
+                if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
+                    log.info(logPrefix + "Job creation request received.");
+                    // delegating job creation to the Jenkins server
+                    JenkinsServer.createJob(incomingJob);
                 }
 
-                // If item is not retrieved, get by full name with escaped characters
-                if(item == null) {
-                    item = myJenkins.getItemByFullName(escapeItemName(fullName));
-                    log.info("Item Found (3): " + item);
-                }
+                if (incomingJob.has("fullName")) {
+                    String fullName = incomingJob.get("fullName").toString();
 
-                List<ParameterValue> parametersList = generateParamList(incomingJob, getParameterTypeMap(item));
+                    Jenkins myJenkins = Jenkins.getInstance();
 
-                JSONObject returnProps = new JSONObject();
-                if(incomingJob.has("returnProps")) {
-                    returnProps = incomingJob.getJSONObject("returnProps");
-                }
+                    // Get item by name
+                    Item item = myJenkins.getItem(fullName);
 
-                CloudCause cloudCause = new CloudCause(incomingJob.get("id").toString(), returnProps);
-                Queue.Item queuedItem = null;
-                String errorMessage = null;
+                    log.info("Item Found (1): " + item);
 
-                if(item instanceof AbstractProject) {
-                    AbstractProject abstractProject = (AbstractProject)item;
-
-                    queuedItem = ParameterizedJobMixIn.scheduleBuild2(abstractProject, 0, new ParametersAction(parametersList), new CauseAction(cloudCause));
-
-                    if (queuedItem == null) {
-                        errorMessage = "Could not start parameterized build.";
+                    // If item is not retrieved, get by full name
+                    if(item == null) {
+                        item = myJenkins.getItemByFullName(fullName);
+                        log.info("Item Found (2): " + item);
                     }
-                } else if (item instanceof WorkflowJob) {
-                    WorkflowJob workflowJob = (WorkflowJob)item;
 
-                    QueueTaskFuture queuedTask = workflowJob.scheduleBuild2(0, new ParametersAction(parametersList), new CauseAction(cloudCause));
-
-                    if (queuedTask == null) {
-                        errorMessage = "Could not start pipeline build.";
+                    // If item is not retrieved, get by full name with escaped characters
+                    if(item == null) {
+                        item = myJenkins.getItemByFullName(escapeItemName(fullName));
+                        log.info("Item Found (3): " + item);
                     }
-                } else if (item == null) {
-                    if(securityError != null) {
-                        if(securityError.equals(AbstractSecuredAction.NO_CREDENTIALS_PROVIDED)) {
-                            errorMessage = "No Item Found. No Jenkins credentials were provided in Velocity config on Jenkins 'Configure System' page.  Credentials may be required.";
-                        } else {
-                            errorMessage = securityError;
+
+                    List<ParameterValue> parametersList = generateParamList(incomingJob, getParameterTypeMap(item));
+
+                    JSONObject returnProps = new JSONObject();
+                    if(incomingJob.has("returnProps")) {
+                        returnProps = incomingJob.getJSONObject("returnProps");
+                    }
+
+                    CloudCause cloudCause = new CloudCause(incomingJob.get("id").toString(), returnProps);
+                    Queue.Item queuedItem = null;
+                    String errorMessage = null;
+
+                    if(item instanceof AbstractProject) {
+                        AbstractProject abstractProject = (AbstractProject)item;
+
+                        queuedItem = ParameterizedJobMixIn.scheduleBuild2(abstractProject, 0, new ParametersAction(parametersList), new CauseAction(cloudCause));
+
+                        if (queuedItem == null) {
+                            errorMessage = "Could not start parameterized build.";
                         }
+                    } else if (item instanceof WorkflowJob) {
+                        WorkflowJob workflowJob = (WorkflowJob)item;
+
+                        QueueTaskFuture queuedTask = workflowJob.scheduleBuild2(0, new ParametersAction(parametersList), new CauseAction(cloudCause));
+
+                        if (queuedTask == null) {
+                            errorMessage = "Could not start pipeline build.";
+                        }
+                    } else if (item == null) {
+                        if(securityError != null) {
+                            if(securityError.equals(AbstractSecuredAction.NO_CREDENTIALS_PROVIDED)) {
+                                errorMessage = "No Item Found. No Jenkins credentials were provided in Velocity config on Jenkins 'Configure System' page.  Credentials may be required.";
+                            } else {
+                                errorMessage = securityError;
+                            }
+                        } else {
+                            errorMessage = "No Item Found";
+                        }
+                        log.warn(errorMessage);
                     } else {
-                        errorMessage = "No Item Found";
+                        errorMessage = "Unhandled job type found: " + item.getClass();
+                        log.warn(errorMessage);
                     }
-                    log.warn(errorMessage);
-                } else {
-                    errorMessage = "Unhandled job type found: " + item.getClass();
-                    log.warn(errorMessage);
-                }
 
-                if( errorMessage != null ) {
-                    JenkinsJobStatus erroredJobStatus = new JenkinsJobStatus(null, cloudCause, null, null, true, true);
-                    JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage);
-                    CloudPublisher.uploadJobStatus(statusUpdate);
+                    if( errorMessage != null ) {
+                        JenkinsJobStatus erroredJobStatus = new JenkinsJobStatus(null, cloudCause, null, null, true, true);
+                        JSONObject statusUpdate = erroredJobStatus.generateErrorStatus(errorMessage);
+                        CloudPublisher.uploadJobStatus(statusUpdate);
+                    }
                 }
-
+                //sendResult(socket, incomingJobs.getJSONObject(i).get("id").toString(), WorkStatus.started, "This work has been started");
             }
-
-            //sendResult(socket, incomingJobs.getJSONObject(i).get("id").toString(), WorkStatus.started, "This work has been started");
         }
 
     }
