@@ -202,7 +202,7 @@ public class CloudSocketComponent {
                         }
                         JSONArray incomingJobs = JSONArray.fromObject("[" + payload + "]");
                         for (int j = 0; j < incomingJobs.size(); j++) {
-                            JSONObject incomingJob = incomingJobs.getJSONObject(i);
+                            JSONObject incomingJob = incomingJobs.getJSONObject(j);
                             String workId = incomingJob.getString("id");
                             String jobName = incomingJob.getString("fullName");
                             StandardUsernamePasswordCredentials credentials = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCredentialsObj();          
