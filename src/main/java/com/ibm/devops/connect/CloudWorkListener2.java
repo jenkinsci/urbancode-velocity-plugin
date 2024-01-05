@@ -131,14 +131,15 @@ public class CloudWorkListener2 {
     private Boolean isDuplicateJob (JSONObject incomingJob) {
         String workId = incomingJob.getString("id");
         String jobName = incomingJob.getString("fullName");
+        log.info(logPrefix + "Checking for duplicate jobs for JOB Name: " + jobName);
         StandardUsernamePasswordCredentials credentials = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCredentialsObj();          
         String plainCredentials = credentials.getUsername() + ":" + credentials.getPassword().getPlainText();
         String encodedString = getEncodedString(plainCredentials);
         String authorizationHeader = "Basic " + encodedString;
         String rootUrl = Jenkins.getInstance().getRootUrl();
-        log.debug("Root Url: " + rootUrl);
+        log.debug(logPrefix + "Root Url: " + rootUrl);
         String path = "job/"+jobName.replaceAll("/", "/job/")+"/api/json";
-        log.debug("Path: " + path);
+        log.debug(logPrefix + "Path: " + path);
         String finalUrl = null;
         String buildDetails = null;
         try {
@@ -146,9 +147,9 @@ public class CloudWorkListener2 {
             builder.setPath(builder.getPath()+path); 
             builder.setParameter("fetchAllbuildDetails", "True");
             finalUrl = builder.toString();
-            log.debug("Final Url: " + finalUrl);
+            log.debug(logPrefix + "Final Url: " + finalUrl);
         } catch (Exception e) {
-            log.warn("Caught error while building url to get details of previous builds: ", e);
+            log.warn(logPrefix + "Caught error while building url to get details of previous builds: ", e);
             return false;
         }
         try {
@@ -156,9 +157,9 @@ public class CloudWorkListener2 {
                 .header("Authorization", authorizationHeader)
                 .asString();
             buildDetails = response.getBody().toString();
-            log.debug("buildDetails Response: " + buildDetails);
+            log.debug(logPrefix + "buildDetails Response: " + buildDetails);
         } catch (UnirestException e) {
-            log.warn("UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
+            log.warn(logPrefix + "UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
             return false;
         }
         if (buildDetails != null) {
@@ -183,7 +184,7 @@ public class CloudWorkListener2 {
                             URIBuilder builder = new URIBuilder(buildUrl);
                             finalBuildUrl = builder.toString();
                         } catch (Exception e) {
-                            log.error("Caught error while building console log url: ", e);
+                            log.error(logPrefix + "Caught error while building console log url: ", e);
                         }
                         try {
                             HttpResponse<String> buildResponse = Unirest.get(finalBuildUrl)
@@ -192,14 +193,14 @@ public class CloudWorkListener2 {
                             String buildConsole = buildResponse.getBody().toString();
                             str.append(buildConsole);
                         } catch (UnirestException e) {
-                            log.error("UnirestException: Failed to get console Logs of previous builds", e);
+                            log.error(logPrefix + "UnirestException: Failed to get console Logs of previous builds", e);
                         }
                     }
                 }
                 String allConsoleLogs = str.toString();
                 boolean isFound = allConsoleLogs.contains("Started due to a request from UrbanCode Velocity. Work Id: "+workId);
                 if(isFound==true){
-                    log.info(" =========================== Found duplicate Jenkins Job and stopped it =========================== ");
+                    log.info(logPrefix + " =========================== Found duplicate Jenkins Job and stopped it =========================== ");
                     return true;
                 }
             }
@@ -220,15 +221,15 @@ public class CloudWorkListener2 {
         }
 
         JSONArray incomingJobs = JSONArray.fromObject("[" + payload + "]");
-        log.debug("incomingJobs: " + incomingJobs.toString());
+        log.info(logPrefix + "incomingJobs: " + incomingJobs.toString());
 
         for(int i=0; i < incomingJobs.size(); i++) {
             JSONObject incomingJob = incomingJobs.getJSONObject(i);
             Boolean isDuplicate = false;
             if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCheckDuplicate() == true) {
                 isDuplicate = isDuplicateJob(incomingJob);
+                log.info(logPrefix + "isDuplicate: " + isDuplicate.toString());
             }
-            log.info("isDuplicate: " + isDuplicate.toString());
             if (isDuplicate == false) {
                  // sample job creation request from a toolchain
                 if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
