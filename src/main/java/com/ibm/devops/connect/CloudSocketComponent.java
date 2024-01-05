@@ -201,85 +201,87 @@ public class CloudSocketComponent {
                             System.out.println("Unable to decrypt");
                         }
                         JSONArray incomingJobs = JSONArray.fromObject("[" + payload + "]");
-                        JSONObject incomingJob = incomingJobs.getJSONObject(0);
-                        String workId = incomingJob.getString("id");
-                        String jobName = incomingJob.getString("fullName");
-                        StandardUsernamePasswordCredentials credentials = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCredentialsObj();          
-                        String plainCredentials = credentials.getUsername() + ":" + credentials.getPassword().getPlainText();
-                        String encodedString = getEncodedString(plainCredentials);
-                        String authorizationHeader = "Basic " + encodedString;
-                        String rootUrl = Jenkins.getInstance().getRootUrl();
-                        log.info("Root Url: " + rootUrl);
-                        String path = "job/"+jobName.replaceAll("/", "/job/")+"/api/json";
-                        log.info("Path: " + path);
-                        String finalUrl = null;
-                        String buildDetails = null;
-                        try {
-                            URIBuilder builder = new URIBuilder(rootUrl);
-                            builder.setPath(builder.getPath()+path); 
-                            builder.setParameter("fetchAllbuildDetails", "True");
-                            finalUrl = builder.toString();
-                            log.info("Final Url: " + finalUrl);
-                        } catch (Exception e) {
-                            log.warn("Caught error while building url to get details of previous builds: ", e);
-                        }
-                        try {
-                            HttpResponse<String> response = Unirest.get(finalUrl)
-                                .header("Authorization", authorizationHeader)
-                                .asString();
-                            buildDetails = response.getBody().toString();
-                            log.info("buildDetails Response: " + buildDetails);
-                        } catch (UnirestException e) {
-                            log.warn("UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
-                            System.out.println(" [x] Received '" + message + "'");
-                            CloudWorkListener2 cloudWorkListener = new CloudWorkListener2();
-                            cloudWorkListener.call("startJob", message);
-                        }
-                        if (buildDetails != null) {
-                            JSONArray buildDetailsArray = JSONArray.fromObject("[" + buildDetails + "]");
-                            JSONObject buildDetailsObject = buildDetailsArray.getJSONObject(0);
-                            if(buildDetailsObject.has("builds")){
-                                JSONArray builds = JSONArray.fromObject(buildDetailsObject.getString("builds"));
-                                int buildsCount = 0;
-                                if(builds.size()<50){
-                                    buildsCount=builds.size();
-                                }
-                                else{
-                                    buildsCount=50;
-                                }
-                                StringBuilder str = new StringBuilder();
-                                for(int i=0;i<buildsCount;i++){
-                                    JSONObject build = builds.getJSONObject(i);
-                                    if(build.has("url")){
-                                        String buildUrl = build.getString("url")+"consoleText";
-                                        String finalBuildUrl = null;
-                                        try {
-                                            URIBuilder builder = new URIBuilder(buildUrl);
-                                            finalBuildUrl = builder.toString();
-                                        } catch (Exception e) {
-                                            log.error("Caught error while building console log url: ", e);
-                                        }
-                                        try {
-                                            HttpResponse<String> buildResponse = Unirest.get(finalBuildUrl)
-                                            .header("Authorization", authorizationHeader)
-                                            .asString();
-                                            String buildConsole = buildResponse.getBody().toString();
-                                            str.append(buildConsole);
-                                        } catch (UnirestException e) {
-                                            log.error("UnirestException: Failed to get console Logs of previous builds", e);
+                        for (int j = 0; j < incomingJobs.size(); j++) {
+                            JSONObject incomingJob = incomingJobs.getJSONObject(j);
+                            String workId = incomingJob.getString("id");
+                            String jobName = incomingJob.getString("fullName");
+                            StandardUsernamePasswordCredentials credentials = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCredentialsObj();          
+                            String plainCredentials = credentials.getUsername() + ":" + credentials.getPassword().getPlainText();
+                            String encodedString = getEncodedString(plainCredentials);
+                            String authorizationHeader = "Basic " + encodedString;
+                            String rootUrl = Jenkins.getInstance().getRootUrl();
+                            log.info("Root Url: " + rootUrl);
+                            String path = "job/"+jobName.replaceAll("/", "/job/")+"/api/json";
+                            log.info("Path: " + path);
+                            String finalUrl = null;
+                            String buildDetails = null;
+                            try {
+                                URIBuilder builder = new URIBuilder(rootUrl);
+                                builder.setPath(builder.getPath()+path); 
+                                builder.setParameter("fetchAllbuildDetails", "True");
+                                finalUrl = builder.toString();
+                                log.info("Final Url: " + finalUrl);
+                            } catch (Exception e) {
+                                log.warn("Caught error while building url to get details of previous builds: ", e);
+                            }
+                            try {
+                                HttpResponse<String> response = Unirest.get(finalUrl)
+                                    .header("Authorization", authorizationHeader)
+                                    .asString();
+                                buildDetails = response.getBody().toString();
+                                log.info("buildDetails Response: " + buildDetails);
+                            } catch (UnirestException e) {
+                                log.warn("UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
+                                System.out.println(" [x] Received '" + message + "'");
+                                CloudWorkListener2 cloudWorkListener = new CloudWorkListener2();
+                                cloudWorkListener.call("startJob", message);
+                            }
+                            if (buildDetails != null) {
+                                JSONArray buildDetailsArray = JSONArray.fromObject("[" + buildDetails + "]");
+                                JSONObject buildDetailsObject = buildDetailsArray.getJSONObject(0);
+                                if(buildDetailsObject.has("builds")){
+                                    JSONArray builds = JSONArray.fromObject(buildDetailsObject.getString("builds"));
+                                    int buildsCount = 0;
+                                    if(builds.size()<50){
+                                        buildsCount=builds.size();
+                                    }
+                                    else{
+                                        buildsCount=50;
+                                    }
+                                    StringBuilder str = new StringBuilder();
+                                    for(int i=0;i<buildsCount;i++){
+                                        JSONObject build = builds.getJSONObject(i);
+                                        if(build.has("url")){
+                                            String buildUrl = build.getString("url")+"consoleText";
+                                            String finalBuildUrl = null;
+                                            try {
+                                                URIBuilder builder = new URIBuilder(buildUrl);
+                                                finalBuildUrl = builder.toString();
+                                            } catch (Exception e) {
+                                                log.error("Caught error while building console log url: ", e);
+                                            }
+                                            try {
+                                                HttpResponse<String> buildResponse = Unirest.get(finalBuildUrl)
+                                                .header("Authorization", authorizationHeader)
+                                                .asString();
+                                                String buildConsole = buildResponse.getBody().toString();
+                                                str.append(buildConsole);
+                                            } catch (UnirestException e) {
+                                                log.error("UnirestException: Failed to get console Logs of previous builds", e);
+                                            }
                                         }
                                     }
+                                    String allConsoleLogs = str.toString();
+                                    boolean isFound = allConsoleLogs.contains("Started due to a request from UrbanCode Velocity. Work Id: "+workId);
+                                    if(isFound==true){
+                                        log.info(" =========================== Found duplicate Jenkins Job and stopped it =========================== ");
+                                    }
+                                    else{
+                                        System.out.println(" [x] Received '" + message + "'");
+                                        CloudWorkListener2 cloudWorkListener = new CloudWorkListener2();
+                                        cloudWorkListener.call("startJob", message);   
+                                    }    
                                 }
-                                String allConsoleLogs = str.toString();
-                                boolean isFound = allConsoleLogs.contains("Started due to a request from UrbanCode Velocity. Work Id: "+workId);
-                                if(isFound==true){
-                                    log.info(" =========================== Found duplicate Jenkins Job and stopped it =========================== ");
-                                }
-                                else{
-                                    System.out.println(" [x] Received '" + message + "'");
-                                    CloudWorkListener2 cloudWorkListener = new CloudWorkListener2();
-                                    cloudWorkListener.call("startJob", message);   
-                                }    
                             }
                         }
                     }
