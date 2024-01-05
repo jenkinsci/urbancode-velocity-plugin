@@ -136,9 +136,9 @@ public class CloudWorkListener2 {
         String encodedString = getEncodedString(plainCredentials);
         String authorizationHeader = "Basic " + encodedString;
         String rootUrl = Jenkins.getInstance().getRootUrl();
-        log.info("Root Url: " + rootUrl);
+        log.debug("Root Url: " + rootUrl);
         String path = "job/"+jobName.replaceAll("/", "/job/")+"/api/json";
-        log.info("Path: " + path);
+        log.debug("Path: " + path);
         String finalUrl = null;
         String buildDetails = null;
         try {
@@ -146,16 +146,17 @@ public class CloudWorkListener2 {
             builder.setPath(builder.getPath()+path); 
             builder.setParameter("fetchAllbuildDetails", "True");
             finalUrl = builder.toString();
-            log.info("Final Url: " + finalUrl);
+            log.debug("Final Url: " + finalUrl);
         } catch (Exception e) {
             log.warn("Caught error while building url to get details of previous builds: ", e);
+            return false;
         }
         try {
             HttpResponse<String> response = Unirest.get(finalUrl)
                 .header("Authorization", authorizationHeader)
                 .asString();
             buildDetails = response.getBody().toString();
-            log.info("buildDetails Response: " + buildDetails);
+            log.debug("buildDetails Response: " + buildDetails);
         } catch (UnirestException e) {
             log.warn("UnirestException: Failed to get details of previous Builds. Skipping duplicate check.");
             return false;
@@ -215,12 +216,11 @@ public class CloudWorkListener2 {
         try {
             payload = decrypt(token, payload);
         } catch (Exception e) {
-            //TODO handle decryption error
-            System.out.println("Unable to decrypt");
+            log.error("Unable to decrypt");
         }
 
-        //TODO Don't make this an array in the silly way that I have.  I just want this to work
         JSONArray incomingJobs = JSONArray.fromObject("[" + payload + "]");
+        log.debug("incomingJobs: " + incomingJobs.toString());
 
         for(int i=0; i < incomingJobs.size(); i++) {
             JSONObject incomingJob = incomingJobs.getJSONObject(i);
@@ -228,7 +228,7 @@ public class CloudWorkListener2 {
             if (Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getCheckDuplicate() == true) {
                 isDuplicate = isDuplicateJob(incomingJob);
             }
-
+            log.info("isDuplicate: " + isDuplicate.toString());
             if (isDuplicate == false) {
                  // sample job creation request from a toolchain
                 if (incomingJob.has("jobType") && "new".equalsIgnoreCase(incomingJob.get("jobType").toString())) {
