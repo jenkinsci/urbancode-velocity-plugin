@@ -15,7 +15,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ibm.devops</groupId>
   <artifactId>urbancode-velocity</artifactId>
-  <version>2.1.4-SNAPSHOT</version>
+  <version>2.1.4</version>
   <packaging>hpi</packaging>
   <name>UrbanCode Velocity Plugin</name>
   <description>This plugin can run Jenkins jobs as a part of a deployment plan in UrbanCode Velocity.</description>
@@ -79,7 +79,7 @@
    <distributionManagement>
     <repository>
       <id>maven.jenkins-ci.org</id>
-      <url>https://repo.jenkins-ci.org/releases/</url>
+      <url>http://repo.jenkins-ci.org/releases/</url>
     </repository>
     <snapshotRepository>
       <id>maven.jenkins-ci.org</id>
@@ -106,7 +106,7 @@
   <scm>
     <connection>scm:git:git://git@github.com/jenkinsci/urbancode-velocity-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:jenkinsci/urbancode-velocity-plugin.git</developerConnection>
-    <tag>urbancode-velocity-2.0.0</tag>
+    <tag>urbancode-velocity-2.1.4</tag>
   </scm>
 
   <repositories>
@@ -134,7 +134,7 @@
   <pluginRepositories>
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/public/</url>
+      <url>https://repo.jenkins-ci.org/public/</url>
     </pluginRepository>
   </pluginRepositories>
 
@@ -167,7 +167,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
-      <version>4.3.6</version>
+      <version>4.5.13</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -238,7 +238,7 @@
     <dependency>
       <groupId>com.rabbitmq</groupId>
       <artifactId>amqp-client</artifactId>
-      <version>5.2.0</version>
+      <version>5.14.2</version>
     </dependency>
     <dependency>
       <groupId>org.acegisecurity</groupId>
