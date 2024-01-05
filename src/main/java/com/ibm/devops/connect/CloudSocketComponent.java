@@ -201,7 +201,7 @@ public class CloudSocketComponent {
                             System.out.println("Unable to decrypt");
                         }
                         JSONArray incomingJobs = JSONArray.fromObject("[" + payload + "]");
-                        for (int i = 0; i < incomingJobs.size(); i++) {
+                        for (int j = 0; j < incomingJobs.size(); j++) {
                             JSONObject incomingJob = incomingJobs.getJSONObject(i);
                             String workId = incomingJob.getString("id");
                             String jobName = incomingJob.getString("fullName");
