@@ -323,7 +323,7 @@ public abstract class AbstractJenkinsStatus {
                 }
             }
         } catch (UnirestException e) {
-            log.error("UnirestException: Failed to get details of requestor", e);
+            log.warn("UnirestException: Failed to get details of requestor");
         }
         // log.info(result.toString());
         return result;
