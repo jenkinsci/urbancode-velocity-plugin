@@ -5,7 +5,7 @@ name: Maven Main Build and Release Artifact
 
 on:
   push:
-    branches: [ master ]
+    branches: [ "2.1.4" ]
 
 jobs:
   build-project:
