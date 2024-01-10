@@ -49,6 +49,7 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
     private String rabbitMQPort;
     private String rabbitMQHost;
     private String apiToken;
+    private Boolean checkDuplicate;
 
     public DevOpsGlobalConfiguration() {
         load();
@@ -78,6 +79,15 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
 
     public void setApiToken(String apiToken) {
         this.apiToken = apiToken;
+        save();
+    }
+
+    public Boolean getCheckDuplicate() {
+        return checkDuplicate;
+    }
+
+    public void setCheckDuplicate(Boolean checkDuplicate) {
+        this.checkDuplicate = checkDuplicate;
         save();
     }
 
@@ -128,6 +138,7 @@ public class DevOpsGlobalConfiguration extends GlobalConfiguration {
         rabbitMQPort = formData.getString("rabbitMQPort");
         rabbitMQHost = formData.getString("rabbitMQHost");
         apiToken = formData.getString("apiToken");
+        checkDuplicate = formData.getBoolean("checkDuplicate");
         save();
 
         reconnectCloudSocket();
