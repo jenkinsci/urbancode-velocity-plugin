@@ -436,7 +436,7 @@ public class CloudPublisher {
 
         // Must include both _ and - headers because NGINX services don't pass _ headers
         // by default and the original version of the Velocity services expected the _
-        // headers
+        // headers.
         message.setHeader("sync-token", entry.getSyncToken());
         message.setHeader("sync-id", syncId);
         message.setHeader("instance-type", "JENKINS");
