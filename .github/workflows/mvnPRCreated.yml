@@ -32,7 +32,7 @@ jobs:
         echo ${{ steps.extract.outputs.version }}
       shell: bash
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ steps.extract.outputs.artifact-id }}-${{ steps.extract.outputs.version }}
         path: /home/runner/work/urbancode-velocity-plugin/urbancode-velocity-plugin/target/urbancode-velocity.hpi
