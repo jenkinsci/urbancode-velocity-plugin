@@ -41,6 +41,10 @@ import java.util.List;
 public class CloudGraphListener implements GraphListener {
     public static final Logger log = LoggerFactory.getLogger(CloudGraphListener.class);
 
+    private List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     public void onNewHead(FlowNode node) {
         FlowExecution execution = node.getExecution();
 
@@ -68,8 +72,7 @@ public class CloudGraphListener implements GraphListener {
         boolean isPauseNode = PauseAction.isPaused(node);
         JenkinsPipelineStatus status = new JenkinsPipelineStatus(workflowRun, cloudCause, node, listener, isStartNode,
                 isPauseNode);
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
-        for (Entry entry : entries) {
+        for (Entry entry : getEntries()) {
             if ((isStartNode || isEndNode || isPauseNode) && entry.isConfigured()) {
                 JSONObject statusUpdate = status.generate(false, entry);
                 CloudPublisher.uploadJobStatus(statusUpdate, entry);

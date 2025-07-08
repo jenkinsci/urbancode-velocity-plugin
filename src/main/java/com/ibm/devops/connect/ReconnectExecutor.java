@@ -36,12 +36,14 @@ public class ReconnectExecutor {
         executor.scheduleWithFixedDelay(runner, 10, 10, TimeUnit.SECONDS);
     }
 
+    private List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     private class ReconnectRunner implements Runnable {
         @Override
         public void run() {
-            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class)
-                    .getEntries();
-            for (Entry entry : entries) {
+            for (Entry entry : getEntries()) {
                 if (!cloudSocketInstance.isAMQPConnected(entry) && entry.isConfigured()) {
                     try {
                         cloudSocketInstance.connectToAMQP(entry);

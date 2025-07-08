@@ -36,10 +36,13 @@ public class ConnectComputerListener extends ComputerListener {
         cloudSocketInstance = comp;
     }
 
+    private List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     @Override
     public void onOnline(Computer c) {
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
-        for (Entry entry : entries) {
+        for (Entry entry : getEntries()) {
             if (c instanceof jenkins.model.Jenkins.MasterComputer && entry.isConfigured()) {
                 String url = getConnectUrl(entry);
                 String logPrefix = "[UrbanCode Velocity " + entry.getBaseUrl()
