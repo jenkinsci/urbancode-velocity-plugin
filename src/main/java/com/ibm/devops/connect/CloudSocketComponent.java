@@ -74,8 +74,12 @@ public class CloudSocketComponent {
         }
     }
 
+    private static List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     public static int getInstanceNum(Entry entry) {
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+        List<Entry> entries = getEntries();
         int i = 0;
         int instanceNum = -1;
         for (Entry entry2 : entries) {

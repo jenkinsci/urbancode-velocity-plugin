@@ -55,13 +55,16 @@ public class UploadJUnitTestResult extends Builder implements SimpleBuildStep {
         return this.properties;
     }
 
+    private List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
             throws AbortException, InterruptedException, IOException {
         Object fatalFailure = this.properties.get("fatal");
         String buildUrl = Jenkins.getInstance().getRootUrl() + build.getUrl();
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
-        for (Entry entry : entries) {
+        for (Entry entry : getEntries()) {
             if (!entry.isConfigured()) {
                 listener.getLogger()
                         .println("Could not upload junit tests to Velocity as there is no configuration specified.");

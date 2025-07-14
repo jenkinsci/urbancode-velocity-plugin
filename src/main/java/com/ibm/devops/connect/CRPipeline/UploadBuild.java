@@ -152,6 +152,10 @@ public class UploadBuild extends Builder implements SimpleBuildStep {
         return this.instanceBaseUrl;
     }
 
+    private static List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     @Override
     public void perform(final Run<?, ?> build, FilePath workspace, Launcher launcher, final TaskListener listener)
             throws AbortException, InterruptedException, IOException {
@@ -173,8 +177,7 @@ public class UploadBuild extends Builder implements SimpleBuildStep {
         String fatal = envVars.expand(this.fatal == null ? "" : this.fatal.toString());
         String instanceBaseUrl = envVars.expand(this.instanceBaseUrl == null ? "" : this.instanceBaseUrl.toString());
 
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
-        List<Entry> finalEntriesList = CloudPublisher.getFinalEntriesList("Upload Build", instanceBaseUrl, entries);
+        List<Entry> finalEntriesList = CloudPublisher.getFinalEntriesList("Upload Build", instanceBaseUrl, getEntries());
         JSONObject payload = new JSONObject();
 
         // user-provided inputs
@@ -329,11 +332,9 @@ public class UploadBuild extends Builder implements SimpleBuildStep {
         public ListBoxModel doFillInstanceBaseUrlItems(@QueryParameter String currentInstanceBaseUrl) {
             // Create ListBoxModel from all projects for this AWS Device Farm account.
             List<ListBoxModel.Option> baseUrls = new ArrayList<ListBoxModel.Option>();
-            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class)
-                    .getEntries();
             String all = "Upload Build to All UCV Instances";
             baseUrls.add(new ListBoxModel.Option(all, all, all.equals(currentInstanceBaseUrl)));
-            for (Entry entry : entries) {
+            for (Entry entry : getEntries()) {
                 // We don't ignore case because these *should* be unique.
                 baseUrls.add(new ListBoxModel.Option(entry.getBaseUrl(), entry.getBaseUrl(),
                         entry.getBaseUrl().equals(currentInstanceBaseUrl)));

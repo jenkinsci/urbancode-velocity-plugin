@@ -127,6 +127,10 @@ public class UploadASoCTestResult extends Notifier {
         return BuildStepMonitor.BUILD;
     }
 
+    private static List<Entry> getEntries() {
+        return Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
+    }
+
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws AbortException, InterruptedException, IOException {
@@ -142,9 +146,7 @@ public class UploadASoCTestResult extends Notifier {
         String recordNameValue = envVars.expand(this.recordName);
         String instanceBaseUrl = envVars.expand(this.instanceBaseUrl == null ? "" : this.instanceBaseUrl.toString());
 
-        List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class).getEntries();
-        List<Entry> finalEntriesList = CloudPublisher.getFinalEntriesList("Upload ASoC Test Result", instanceBaseUrl,
-                entries);
+        List<Entry> finalEntriesList = CloudPublisher.getFinalEntriesList("Upload ASoC Test Result", instanceBaseUrl, getEntries());
 
         Job parentJob = (Job) build.getParent();
         Run thisBuild = parentJob.getBuildByNumber(build.getNumber());
@@ -314,11 +316,9 @@ public class UploadASoCTestResult extends Notifier {
         public ListBoxModel doFillInstanceBaseUrlItems(@QueryParameter String currentInstanceBaseUrl) {
             // Create ListBoxModel from all projects for this AWS Device Farm account.
             List<ListBoxModel.Option> baseUrls = new ArrayList<ListBoxModel.Option>();
-            List<Entry> entries = Jenkins.getInstance().getDescriptorByType(DevOpsGlobalConfiguration.class)
-                    .getEntries();
             String all = "Upload ASoC Test Result to All UCV Instances";
             baseUrls.add(new ListBoxModel.Option(all, all, all.equals(currentInstanceBaseUrl)));
-            for (Entry entry : entries) {
+            for (Entry entry : getEntries()) {
                 // We don't ignore case because these *should* be unique.
                 baseUrls.add(new ListBoxModel.Option(entry.getBaseUrl(), entry.getBaseUrl(),
                         entry.getBaseUrl().equals(currentInstanceBaseUrl)));
